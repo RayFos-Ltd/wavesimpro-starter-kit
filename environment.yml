@@ -1,0 +1,13 @@
+name: wavesimpro-starter-kit
+channels:
+  - conda-forge
+dependencies:
+  # Conda-friendly scientific stack. The engine-free helpers in wsutils use only these.
+  - python>=3.11,<4.0
+  - numpy
+  - scipy>=1.15.0,<2.0.0
+  - matplotlib>=3.0
+  - pip
+  - pip:
+      # wavesimpro is PyPI-only (not on conda-forge): the cloud client that provides `simulate`.
+      - wavesimpro
