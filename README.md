@@ -1,6 +1,14 @@
 # wavesimpro-starter-kit
 
-A lightweight companion repository for the [`wavesimpro`](https://pypi.org/project/wavesimpro/) API.
+A lightweight companion repository for **WaveSimPro**, the cloud wave-simulation service by
+[Rayfos](https://www.rayfos.com/wavesimpro). The examples here call `simulate` against the
+WaveSimPro platform — the [`wavesimpro`](https://pypi.org/project/wavesimpro/) PyPI package is the
+thin client that talks to it.
+
+> ### 🔑 You need a WaveSimPro account to run these examples
+> The simulations run on the WaveSimPro cloud, not on your machine.
+> - **Register / sign in:** **[studio.rayfos.com](https://studio.rayfos.com/)**
+> - **Product overview:** **[rayfos.com/wavesimpro](https://www.rayfos.com/wavesimpro)**
 
 It contains **only** what a user of `wavesimpro` needs to get going:
 
