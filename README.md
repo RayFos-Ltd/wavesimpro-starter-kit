@@ -32,7 +32,19 @@ Run the commands from the repository root.
 ### Option A — conda (recommended)
 
 The conda-friendly scientific stack comes from `conda-forge`; `wavesimpro` is installed via `pip`
-(it is not on conda-forge):
+(it is not on conda-forge).
+
+**Don't have conda yet?** We recommend [Miniconda](https://docs.anaconda.com/miniconda/) (a much
+lighter counterpart of Anaconda):
+
+1. **Download Miniconda**, choosing the [installer](https://docs.anaconda.com/miniconda/) for your
+   operating system (Windows/macOS/Linux).
+2. **Install it**, following the [installation instructions](https://docs.anaconda.com/miniconda/miniconda-install/)
+   for your OS. If you are unsure about any setting, accept the defaults. (If you cannot immediately
+   use conda, close and re-open your terminal — on Windows, use the **Anaconda Prompt**.)
+3. **Test the installation** by running `conda list` — a list of installed packages should appear.
+
+Then, from the repository root, create the environment and install the local helpers:
 
 ```bash
 conda env create -f environment.yml
@@ -61,6 +73,18 @@ on the path, so the example scripts run from anywhere with no `sys.path` jugglin
 > **GPU note:** some examples pass `simulate(..., use_gpu=True)`. This is a *server-side* flag
 > for the `wavesimpro` cloud platform — nothing runs on your local GPU, and results return as
 > plain host NumPy arrays. There is **no** local `cupy` (or other GPU) dependency to install.
+
+## Get your API key
+
+The simulations run on the WaveSimPro cloud, so the `wavesimpro` client needs an API key to
+authenticate. Once you've [registered](https://studio.rayfos.com/), get one here:
+
+1. Sign in and open **[studio.rayfos.com/api](https://studio.rayfos.com/api)**.
+2. Use a key you already have, or click **Create** to generate a new one, and copy it.
+
+The first time you run a simulation, the `wavesimpro` client detects that it isn't configured yet
+and prints instructions on how to register your key (there is more than one supported way). Follow
+that prompt with the key you just copied — after that, the examples run without further setup.
 
 ## Run an example
 
