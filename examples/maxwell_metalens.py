@@ -1,6 +1,6 @@
 """
-Large-area flat metalens — focal cone & Airy spot (FLAGSHIP)
-============================================================
+Large-area flat metalens — focal cone & Airy spot
+==================================================
 A metalens focuses light with a flat, wavelength-thin structured surface instead
 of a bulky curved lens. This example builds a 3-D flat lens on a glass substrate,
 illuminates it with a normally-incident plane wave, and solves the full vector
@@ -20,21 +20,21 @@ set to the hyperbolic lens phase φ(r) = −k₀(√(r²+f²) − f) wrapped to 
 result is a set of concentric blazed Fresnel zones, sub-wavelength near the rim.
 Because the material is solid and fully resolved (no effective-medium model, no
 isolated-pillar resonances), the phase is physically imprinted and the lens
-focuses — validated in 2-D (maxwell_metalens_2d.py) against an angular-spectrum
-reference and the convention probe (maxwell_focus_validate.py).
+focuses to a diffraction-limited spot.
 
 This is a diffractive (kinoform / blazed-Fresnel) flat lens. A true sub-wavelength
-*nanopillar metasurface* is the alternative realization (distinct from a DOE), but
-it needs a calibrated meta-atom library; the surface-relief here is the reliable
-route to the flagship visual and the low-memory / large-domain story.
+*nanopillar metasurface* is the alternative realization; see
+maxwell_metalens_nanopillar.py, which realizes the same focusing phase with a
+calibrated meta-atom library.
 
-Why this is the flagship (and why ray tracing cannot touch it)
---------------------------------------------------------------
+Why a full-wave solver is required (and ray tracing is not enough)
+------------------------------------------------------------------
 Image formation is pure diffraction from wavelength-scale zones, summed coherently
 across the aperture: the focal cone, the Airy spot, the zone-edge scatter, and the
 finite-aperture / low-Fresnel-number focal shift are all full-wave effects. A ray
-tracer can model the equivalent ideal lens but not the structured surface that
-physically produces the phase.
+tracer can model an equivalent ideal lens but not the structured surface that
+physically produces the phase, so it cannot predict zone-edge scatter, the true
+spot shape, or efficiency.
 
 FDTD pain point — memory / domain size
 --------------------------------------
@@ -44,7 +44,7 @@ state), so most FDTD studies are forced to 2-D or a few-tens-of-λ apertures. MB
 samples coarsely (~tens of bytes/voxel, no time axis) and returns the steady-state
 complex field directly, so a full-aperture 3-D lens fits in memory. The default
 below is a fast ~10-µm-aperture run; scale ``aperture`` and ``focal_length`` up
-(1–3 Gvoxel band) for the hero render.
+(into the 1–3 Gvoxel band) for a large-area lens.
 
 Physics / solver mode
 ---------------------
@@ -98,12 +98,13 @@ n_lens = 2.4       # TiO₂-like relief index at visible wavelengths (real, low-
 n_substrate = 1.5  # glass substrate
 n_bg = 1.0         # air (background and focal medium)
 
-# Metalens aperture & focusing. Kit default = fast ~10 µm aperture; scale both up
-# (toward 1–3 Gvoxel) for the hero render.
+# Metalens aperture & focusing. Default = fast ~10 µm aperture; scale both up
+# (toward the 1–3 Gvoxel band) for a large-area lens.
 aperture = 10.0       # diameter of the circular aperture, μm
 focal_length = 12.0   # design focal length from the relief exit plane, μm
 
-# −1 is the focusing sign (standard convention), verified in maxwell_focus_validate.py.
+# −1 is the focusing sign (standard convention): a converging phase collapses to a
+# focus a distance f beyond the lens; +1 would diverge.
 focusing_sign = -1.0
 
 k0 = 2 * np.pi / wavelength

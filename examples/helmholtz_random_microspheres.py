@@ -1,23 +1,23 @@
 """
-Random microsphere scattering medium — volumetric speckle (Vellekoop heritage)
-==============================================================================
+Random microsphere scattering medium — volumetric speckle
+=========================================================
 A plane wave enters a slab of randomly packed dielectric microspheres (n ≈ 1.33,
-the published modified-Born-series scattering demo, with a touch of absorption)
-suspended in air. After only a few layers the smooth incident wavefront has
-shattered into a fully three-dimensional **speckle** field: the coherent sum of
-light scattered off thousands of spheres along every possible path. This is the
-problem the convergent/modified Born series (MBS) algorithm was *born* on — the
-Vellekoop–Osnabrugge disordered-medium solve — and it sits squarely in the
-engine's large-domain / low-memory sweet spot.
+a water-like index with a touch of absorption) suspended in air. After only a few
+layers the smooth incident wavefront has shattered into a fully three-dimensional
+**speckle** field: the coherent sum of light scattered off thousands of spheres
+along every possible path. Disordered-medium scattering of this kind is the
+canonical problem the convergent/modified Born series (MBS) was developed for
+(Osnabrugge, Leedumrongwatthanakun & Vellekoop, J. Comput. Phys. 322, 2016), and
+it plays to the method's large-domain, low-memory strengths.
 
-Why this needs a full-wave solver (and ray tracing cannot touch it)
--------------------------------------------------------------------
+Why a full-wave solver is required (and ray tracing is not enough)
+------------------------------------------------------------------
 Speckle is pure multiple *coherent* scattering: it is the interference of
 millions of scattered partial waves. There is no ray-optics picture of a speckle
 grain — it exists only because the field has a phase and that phase adds up
-coherently over many scattering events. A ray tracer (Zemax & co.) models each
-sphere as a refracting/reflecting surface and produces a smooth blur; it has no
-mechanism to produce the high-contrast granular field you actually measure.
+coherently over many scattering events. A ray tracer models each sphere as a
+refracting/reflecting surface and produces a smooth blur; it has no mechanism to
+produce the high-contrast granular field you actually measure.
 
 FDTD pain point: the strongest peer-reviewed MBS head-to-head is exactly this
 scattering regime — the MBS Mie/disorder validation reports ~1.7% error against
@@ -27,11 +27,11 @@ voxel, so a slab many tens of wavelengths on a side fits in memory.
 
 Physics / solver mode
 ---------------------
-Scalar Helmholtz (one CW frequency, linear, non-magnetic). Scalar — not vector
-Maxwell — is deliberate: it is the authentic disordered-medium demo, it is the
-cheapest route to a *developed* volumetric speckle field, and it keeps the voxel
-budget low, which is the whole point of this example. The output is the
-steady-state complex field; |field|² is the speckle intensity.
+Scalar Helmholtz (one CW frequency, linear, non-magnetic). The scalar model — not
+vector Maxwell — is the standard description of disordered-medium scattering, is
+the cheapest route to a *developed* volumetric speckle field, and keeps the voxel
+budget low. The output is the steady-state complex field; |field|² is the speckle
+intensity.
 
 Geometry (propagation = X; transverse = Y, Z)
 ---------------------------------------------
@@ -47,10 +47,10 @@ Geometry (propagation = X; transverse = Y, Z)
     off the domain edges.
 
 Everything that sets the scene — wavelength, domain size, grid spacing, slab
-extent, sphere radius/index, fill fraction — is a top-level variable so the demo
-re-scales. Defaults resolve each sphere with ~12 voxels across (~5 Mvoxel run);
-drop ``pixel_size`` to λ/5 for a quick coarse run, or push ``sim_size`` /
-``fill_fraction`` up for the hero render (the 1–3 Gvoxel band).
+extent, sphere radius/index, fill fraction — is a top-level variable so the
+example re-scales. Defaults resolve each sphere with ~12 voxels across (~5 Mvoxel
+run); drop ``pixel_size`` to λ/5 for a quick coarse run, or push ``sim_size`` /
+``fill_fraction`` up into the 1–3 Gvoxel band for a larger slab.
 
 Outputs (saved in the git-ignored output/ folder)
 -------------------------------------------------
@@ -90,9 +90,9 @@ pixel_size = wavelength / 8  # Grid spacing in μm. ~8 px/λ in air, ~6 px/λ in
 #                              (λ/5 ≈ 7.5 voxels/sphere was geometrically too coarse).
 #                              Use λ/5 for a quick coarse run, λ/10 for an even finer one.
 
-# Domain: a cube. X = propagation, Y, Z = transverse. Defaults are a fast,
-# kit-suitable run; scale sim_size up (and fill_fraction toward ~0.35) for the
-# 1–3 Gvoxel hero render.
+# Domain: a cube. X = propagation, Y, Z = transverse. Defaults are a fast run;
+# scale sim_size up (and fill_fraction toward ~0.35) into the 1–3 Gvoxel band for
+# a larger slab.
 sim_size = np.array([26.0, 20.0, 20.0])  # (x, y, z) simulation size in μm
 n_size = (sim_size / pixel_size).astype(int)
 nx, ny, nz = (int(v) for v in n_size)

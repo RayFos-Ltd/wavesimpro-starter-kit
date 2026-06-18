@@ -1,7 +1,7 @@
 """
 Maxwell 2D photonic-crystal waveguide bend (90°)
 ================================================
-The companion finale to maxwell_photonic_crystal.py. Same square lattice of
+A companion to maxwell_photonic_crystal.py. Same square lattice of
 dielectric rods, but we remove an L-shaped path of rods to carve a line-defect
 waveguide that turns a sharp 90° corner. Light injected into the channel at an
 in-gap wavelength is guided along it and around the corner -- it *cannot* leak

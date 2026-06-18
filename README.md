@@ -23,6 +23,30 @@ It contains **only** what a user of `wavesimpro` needs to get going:
 These utilities produce plain NumPy arrays and depend only on NumPy/SciPy/Matplotlib — they do
 **not** import the `wavesim` core engine. The only wave-simulation dependency is `wavesimpro`.
 
+## Scientific foundation
+
+WaveSimPro is built on the **modified Born series (MBS)** method for solving the wave equation —
+an approach with no numerical dispersion, lower memory requirements, and faster convergence than
+the finite-difference time-domain (FDTD) methods traditionally used for these problems. The method
+and its open-source reference implementation were developed by **[Ivo Vellekoop](https://github.com/IvoVellekoop)**
+and colleagues at the **University of Twente**, to whom this project owes its scientific foundation.
+
+The two publications behind the method:
+
+> Osnabrugge, G., Leedumrongwatthanakun, S., & Vellekoop, I. M. (2016). *A convergent Born series
+> for solving the inhomogeneous Helmholtz equation in arbitrarily large media.* Journal of
+> Computational Physics, 322, 113–124. <https://doi.org/10.1016/j.jcp.2016.06.034>
+
+> Mache, S., & Vellekoop, I. M. (2025). *Domain decomposition of the modified Born series approach
+> for large-scale wave propagation simulations.* Journal of Computational Physics, 114619.
+> <https://doi.org/10.1016/j.jcp.2025.114619>
+
+The reference open-source Python implementation, **`wavesim_py`**, is available on GitHub at
+**<https://github.com/IvoVellekoop/wavesim_py>** (documentation:
+[wavesim.readthedocs.io](https://wavesim.readthedocs.io/); project site:
+[wavesim.org](https://www.wavesim.org/)). The `wsutils` helpers in this starter kit are adapted
+from it — see [License](#license).
+
 ## Install
 
 The only wave-simulation dependency, [`wavesimpro`](https://pypi.org/project/wavesimpro/), is a
@@ -92,6 +116,9 @@ that prompt with the key you just copied — after that, the examples run withou
 python examples/helmholtz_simulate.py
 ```
 
+For a guided tour of all the scripts — application showcases, getting-started
+building blocks, and validation cases — see the **[Examples Catalogue](EXAMPLES.md)**.
+
 ## Layout
 
 ```
@@ -100,6 +127,7 @@ wavesimpro-starter-kit/
 ├── environment.yml   # conda env (conda-forge stack + wavesimpro via pip)
 ├── requirements.txt  # pip-only install path
 ├── README.md
+├── EXAMPLES.md       # catalogue of every example, grouped and described
 ├── wsutils/          # engine-free helper utilities
 │   ├── create_medium.py
 │   ├── create_source.py

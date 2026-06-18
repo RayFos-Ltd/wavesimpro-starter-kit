@@ -1,11 +1,12 @@
 """
-Large-area nanopillar metalens — calibrated meta-atom library (FLAGSHIP variant)
-================================================================================
-A clone of maxwell_metalens.py that realizes the SAME hyperbolic focusing phase
-with a genuine **sub-wavelength nanopillar metasurface** instead of a surface
-relief. Each cell of a sub-wavelength square lattice holds one TiO₂ pillar; the
-pillar DIAMETER sets the local transmitted phase. This is the canonical metasurface
-flat lens — distinct from a diffractive/relief optic (shortlist #6).
+Large-area nanopillar metalens — calibrated meta-atom library
+=============================================================
+A companion to maxwell_metalens.py that realizes the SAME hyperbolic focusing
+phase with a genuine **sub-wavelength nanopillar metasurface** instead of a
+surface relief. Each cell of a sub-wavelength square lattice holds one TiO₂
+pillar; the pillar DIAMETER sets the local transmitted phase. This is the
+canonical metasurface flat lens — distinct from the diffractive/relief optic in
+maxwell_metalens.py.
 
 The phase a pillar imprints is NOT modelled by effective medium here (that thin-
 element approximation does not hold for these high-index meta-atoms). Instead we
@@ -15,7 +16,7 @@ and measure the actual transmitted phase. That measured diameter→phase map is 
 inverted to place pillars realizing the lens phase. This is how real metasurfaces
 are designed.
 
-Conventions (verified — see maxwell_focus_validate.py):
+Conventions:
   * source axis order (polarization, x, y, z); a yz sheet is (1, 1, ny, nz);
   * y-polarization (transverse to +x propagation);
   * focusing-phase sign = −1 (φ(r) = −k₀(√(r²+f²) − f)).

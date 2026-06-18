@@ -10,8 +10,8 @@ the gap it passes straight through.
 Why this needs a full-wave solver (and a ray tracer cannot do it): a bandgap is
 a pure multiple-interference effect. There is no "ray" explanation for "light of
 this colour physically cannot exist inside this lattice" -- it emerges from the
-coherent sum of scattering off every rod. This is exactly the regime where ray
-optics (Zemax & co.) has nothing to say and a Maxwell solver earns its keep.
+coherent sum of scattering off every rod. Geometric ray optics has nothing to say
+in this regime; a Maxwell solver is required.
 
 Geometry (the textbook TM-gap configuration, after Joannopoulos, *Photonic
 Crystals: Molding the Flow of Light*):

@@ -1,15 +1,15 @@
 """
-2-D flat metalens — fast single-solve demo
-==========================================
+2-D flat metalens — fast single-solve cross-section
+===================================================
 A 2-D (x, y) cross-section of a flat focusing lens — the quickest way to see a
 metalens focus. The domain is one voxel thick in z and periodic there (a true 2-D
-solve, as in maxwell_microlens.py), so it is ~500x smaller than the 3-D flagship
-(~0.3 Mvoxel) and runs in seconds with no large-GPU run needed. Polarization is z
-(TM, E_z) — z is the invariant direction, so E is transverse to the +x
-propagation. The full field is saved to output/metalens_2d_field.npy so the focus
-can be inspected numerically (peak location, beam width, spot FWHM).
+solve, as in maxwell_microlens.py), so it is ~500x smaller than the 3-D version
+(~0.3 Mvoxel) and runs in a couple of seconds. Polarization is z (TM, E_z) — z is the
+invariant direction, so E is transverse to the +x propagation. The full field is
+saved to output/metalens_2d_field.npy so the focus can be inspected numerically
+(peak location, beam width, spot FWHM).
 
-For the full 3-D flagship see maxwell_metalens.py (surface-relief) and
+For the full 3-D versions see maxwell_metalens.py (surface-relief) and
 maxwell_metalens_nanopillar.py (calibrated sub-wavelength nanopillar metasurface).
 
 Realization: blazed surface-relief (kinoform)
@@ -25,7 +25,7 @@ set to the hyperbolic lens phase φ(r) = sign·k₀(√(r²+f²) − f) wrapped 
 The material is solid and fully resolved (no sub-wavelength features, no
 effective-medium approximation), so the phase is physically imprinted and the lens
 focuses to a diffraction-limited spot. A surface relief is the simplest realization
-for a 2-D demo; the 3-D scripts show both the relief and the nanopillar metasurface.
+in 2-D; the 3-D scripts show both the relief and the nanopillar metasurface.
 
 Outputs (git-ignored output/ folder):
   * output/metalens_2d_field.png   — the X–Y |E| map (focal cone);
@@ -58,8 +58,8 @@ aperture = 10.0       # aperture extent in Y, μm
 focal_length = 12.0   # design focal length from the relief exit plane, μm
 
 # Sign of the focusing phase φ(r) = sign·k₀(√(r²+f²)−f). −1 is the focusing sign
-# (standard convention), verified in maxwell_focus_validate.py: a converging source
-# with sign=−1 collapses to a focus at x_src+f, sign=+1 diverges.
+# (standard convention): a converging phase with sign=−1 collapses to a focus a
+# distance f beyond the lens; sign=+1 diverges.
 focusing_sign = -1.0
 
 k0 = 2 * np.pi / wavelength
@@ -182,7 +182,7 @@ ax.axvline(x_focus, color="lime", lw=0.8, ls=":", alpha=0.7)
 ax.set_xlim(x_sub0, nx * pixel_size)
 ax.set_xlabel(r"$x~(\mu m)$ — propagation")
 ax.set_ylabel(r"$y~(\mu m)$ — aperture")
-ax.set_title(f"2-D metalens debug (aperture {aperture} μm, f = {focal_length} μm, NA = {NA:.2f})\n"
+ax.set_title(f"2-D metalens (aperture {aperture} μm, f = {focal_length} μm, NA = {NA:.2f})\n"
              "cyan = relief layer, green dotted = design focus")
 fig.colorbar(im, ax=ax, fraction=0.046, pad=0.04).ax.set_title(r"$|E|$")
 fig.tight_layout()

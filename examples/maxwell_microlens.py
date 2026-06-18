@@ -3,16 +3,15 @@ Maxwell CMOS/CCD microlens — diffraction-limited focus & angular response
 =========================================================================
 A sensor pixel is tiny. At a ~2 μm pitch with λ ≈ 0.5 μm, the microlens that
 funnels light onto the photodiode is only ~4λ across, and the spot it forms is
-~λ wide — comparable to the photosite itself. That is the regime where ray
-tracing (Zemax, OpticStudio, …) quietly stops being valid: there are no "rays"
-at this scale, only a diffracting field. This example solves the full
-time-harmonic Maxwell field for a 3-pixel cross-section and sweeps the chief-ray
-angle (CRA) to show the focus walking off the photosite and spilling into the
-neighbour — i.e. the pixel's *angular response* and *optical crosstalk*, both of
-which are pure wave effects.
+~λ wide — comparable to the photosite itself. That is the regime where geometric
+ray tracing quietly stops being valid: there are no "rays" at this scale, only a
+diffracting field. This example solves the full time-harmonic Maxwell field for a
+3-pixel cross-section and sweeps the chief-ray angle (CRA) to show the focus
+walking off the photosite and spilling into the neighbour — i.e. the pixel's
+*angular response* and *optical crosstalk*, both of which are pure wave effects.
 
-Why this is a "why-not-ray-tracing" demo
------------------------------------------
+Why a full-wave solver is required (and ray tracing is not enough)
+------------------------------------------------------------------
 A ray tracer treats the microlens as an ideal imaging element and predicts a
 point focus that the chief ray drags sideways by ~f·tan(CRA). We overlay exactly
 that prediction (the ✕ marker) on each field map. The real field tells a

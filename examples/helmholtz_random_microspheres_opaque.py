@@ -1,6 +1,6 @@
 """
-Strong-scattering microsphere slab — the full Vellekoop TiO2 regime (cloud-scale)
-=================================================================================
+Strong-scattering microsphere slab — opaque, diffusive regime (cloud-scale)
+===========================================================================
 A full-scale, strongly-scattering relative of ``helmholtz_random_microspheres.py``.
 Same concept (a plane wave on a slab of randomly packed dielectric microspheres ->
 volumetric speckle), but pushed all the way into the *opaque, diffusive* regime of
@@ -11,12 +11,12 @@ used rutile TiO2 pigment (n ≈ 2.7), 10.1 μm thick, transport mean free path
 index contrast, a thick densely-packed slab, and a domain large enough that the
 transmitted speckle is measured in the far field.
 
-This is the heavy, cloud-GPU hero render (hundreds of Mvoxel). It is intentionally
-NOT the fast showcase — that role stays with the n = 1.33 base example. Here every
-knob is turned up and the costs are made explicit.
+This is a large run (hundreds of Mvoxel) intended for the cloud GPU; for a quick
+look, use the n = 1.33 base example instead. Here the index contrast, slab
+thickness and grid are all turned up, and the resulting costs are made explicit.
 
-Why this is a separate, heavier example
-----------------------------------------
+Why the strong-scattering regime costs more
+--------------------------------------------
 Two costs stack up with index contrast:
 
 1. **More iterations.** The modified Born series converges for *any* contrast (the
@@ -65,13 +65,13 @@ from wavesimpro import simulate
 
 
 # =============================================================================
-# Configuration  (every scene parameter is here; the demo re-scales from this)
+# Configuration  (every scene parameter is here; the example re-scales from this)
 # =============================================================================
 wavelength = 1.0  # Wavelength in micrometer (μm), in the air background (n = 1)
 
 # Microspheres — rutile-grade contrast (the paper's TiO2 pigment is n ≈ 2.7). The
-# small imaginary part is the "small absorption" of the published demo and aids
-# MBS convergence. Same sphere size as the base example (concept unchanged).
+# small imaginary part is a light absorption that also aids MBS convergence. Same
+# sphere size as the base example (concept unchanged).
 sphere_index = 2.7 + 0.01j  # high index contrast (Δn = 1.7 vs air)
 bg_index = 1.0
 sphere_radius = 0.75  # μm (size parameter 2πr/λ ≈ 4.7)
