@@ -16,7 +16,7 @@ from .create_source import (
     check_source_parameters,
     polarization_
 )
-from .plotting import plot_computed, plot_computed_and_reference
+from .plotting import plot_computed, plot_computed_and_reference, OUTPUT_DIR
 from .utilities import (
     normalize,
     laplace_kernel_1d,

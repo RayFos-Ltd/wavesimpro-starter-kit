@@ -1,9 +1,24 @@
+import os
+
 import numpy as np
 from matplotlib import colors
 import matplotlib.pyplot as plt
 from time import localtime, strftime
 
 from .utilities import normalize, relative_error
+
+# Common folder for figures/artifacts produced by the examples. Git-ignored
+# (see .gitignore) so generated output never gets committed.
+OUTPUT_DIR = "output"
+
+
+def _save_figure(filename):
+    """Save the current figure as PNG + PDF, creating the parent dir if needed."""
+    parent = os.path.dirname(filename)
+    if parent:
+        os.makedirs(parent, exist_ok=True)
+    plt.savefig(f'{filename}.png', bbox_inches='tight', pad_inches=0.03, dpi=300)
+    plt.savefig(f'{filename}.pdf', bbox_inches='tight', pad_inches=0.03, dpi=300)
 
 
 def plot_computed(u, pixel_size, normalize_u=True, cmap="inferno", log=False, show=True, save=False, filename=None):
@@ -24,7 +39,7 @@ def plot_computed(u, pixel_size, normalize_u=True, cmap="inferno", log=False, sh
 
         plt.tight_layout()
         if filename is None:
-            filename = f'logs/fig1d_{date_time}'
+            filename = f'{OUTPUT_DIR}/fig1d_{date_time}'
 
     else:
         if u.ndim == 4:
@@ -48,10 +63,10 @@ def plot_computed(u, pixel_size, normalize_u=True, cmap="inferno", log=False, sh
         plt.tight_layout()
 
         if filename is None:
-            filename = f'logs/fig2d_{date_time}'
+            filename = f'{OUTPUT_DIR}/fig2d_{date_time}'
 
-    plt.savefig(f'{filename}.png', bbox_inches='tight', pad_inches=0.03, dpi=300) if save else None
-    plt.savefig(f'{filename}.pdf', bbox_inches='tight', pad_inches=0.03, dpi=300) if save else None
+    if save:
+        _save_figure(filename)
     plt.show() if show else None
     plt.close('all')
 
@@ -142,9 +157,9 @@ def plot_computed_and_reference(u, u_ref, pixel_size, re=None, normalize_u=True,
         plt.suptitle(f"Relative error (RE) = {re:.2e}")
         plt.tight_layout()
         if filename is None:
-            filename = f'logs/fig2d_{date_time}'
+            filename = f'{OUTPUT_DIR}/fig2d_{date_time}'
 
-    plt.savefig(f'{filename}.png', bbox_inches='tight', pad_inches=0.03, dpi=300) if save else None
-    plt.savefig(f'{filename}.pdf', bbox_inches='tight', pad_inches=0.03, dpi=300) if save else None
+    if save:
+        _save_figure(filename)
     plt.show() if show else None
     plt.close('all')
