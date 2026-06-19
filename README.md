@@ -103,7 +103,7 @@ on the path, so the example scripts run from anywhere with no `sys.path` jugglin
 The simulations run on the WaveSimPro cloud, so the `wavesimpro` client needs an API key to
 authenticate. Once you've [registered](https://studio.rayfos.com/), get one here:
 
-1. Sign in and open **[studio.rayfos.com/api](https://studio.rayfos.com/api)**.
+1. Sign in and open **[studio.rayfos.com/api-access](https://studio.rayfos.com/api-access)**.
 2. Use a key you already have, or click **Create** to generate a new one, and copy it.
 
 The first time you run a simulation, the `wavesimpro` client detects that it isn't configured yet
