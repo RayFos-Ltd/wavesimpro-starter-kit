@@ -149,3 +149,12 @@ wavesimpro-starter-kit/
 [`wavesim_py`](https://github.com/IvoVellekoop/wavesim_py) project (Ivo Vellekoop, Swapnil Mache —
 University of Twente); the `LICENSE` file retains that original copyright notice alongside
 Rayfos Ltd.
+
+The waveguide mode solver in [`wsutils/svmodes.py`](wsutils/svmodes.py) (the `svmodes`
+finite-difference semi-vectorial eigenmode solver) is vendored from the MIT-licensed
+[`modesolver`](https://github.com/thomas-e-murphy/modesolver) package
+(© 2025 Thomas E. Murphy), which implements the method of A. B. Fallahkhair, K. S. Li and
+T. E. Murphy, *"Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides"*,
+J. Lightwave Technol. **26**(11), 1423–1431 (2008),
+[doi:10.1109/JLT.2008.923643](https://doi.org/10.1109/JLT.2008.923643). Its full copyright and
+permission notice are retained in the `LICENSE` file under *Third-party components*.

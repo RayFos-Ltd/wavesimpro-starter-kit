@@ -1,265 +1,252 @@
 """
 Semi-vectorial waveguide mode solver
 ====================================
-A single-function, engine-free extract: the ``svmodes`` finite-difference
-semi-vectorial eigenmode solver for a 2D waveguide cross-section. Given a
-permittivity profile on the input plane it returns the mode field(s) and the
-corresponding effective index/indices, which the examples use to launch a true
-guided mode (instead of a Gaussian approximation).
+An engine-free extract of the ``svmodes`` finite-difference semi-vectorial
+eigenmode solver for a 2D waveguide cross-section. Given a permittivity profile
+on the input plane it returns the effective index/indices and the mode field(s),
+which the examples use to launch a true guided mode (instead of a Gaussian
+approximation) and to design modal beat lengths (MMI, directional coupler).
 
-Translated from the MATLAB "Waveguide Mode Solver" by Thomas Murphy:
-https://mathworks.com/matlabcentral/fileexchange/12734-waveguide-mode-solver
+Vendored (the solver function only) from the ``modesolver`` package by
+Thomas E. Murphy (tem@umd.edu) — finite-difference method of
+    A. B. Fallahkhair, K. S. Li and T. E. Murphy,
+    "Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides",
+    J. Lightwave Technol. 26(11), 1423-1431 (2008). doi:10.1109/JLT.2008.923643
+    https://github.com/thomas-e-murphy/modesolver
+
+Copyright (c) 2025 Thomas E. Murphy. Used and modified under the MIT License; the
+full copyright and permission notice are retained in the repository ``LICENSE``
+file (see "Third-party components").
+
+Trimmed for this starter kit to a numpy + scipy footprint: the upstream
+shift-invert solver auto-selection (PyPardiso / MUMPS) is dropped in favour of
+SciPy's built-in shift-invert (``eigs(..., sigma=...)``), which factorizes
+``A - sigma*I`` with SuperLU. No extra dependencies are introduced.
 """
 
+import warnings
 import numpy as np
 from typing import Sequence
+from scipy.sparse import coo_matrix
 from scipy.sparse.linalg import eigs
-from scipy.sparse import csr_matrix, eye_array
 
 from .create_source import expand_source_shape, check_source_parameters, polarization_
 
 
-def svmodes(wavelength: float, guess: complex, nmodes: int, dx: float, dy: float, eps: np.ndarray, field: str):
+def svmodes(wavelength, guess, nmodes, dx, dy, eps, boundary, field):
     """
-    Args:
-        wavelength: wavelength in micrometer (μm)
-        guess: initial guess for effective index (refractive index of the waveguide)
-        nmodes: number of modes to compute (usually fundamental, and thus, = 1)
-        dx: horizontal grid spacing. Assumed to be scalar
-        dy: vertical grid spacing. Assumed to be scalar
-        eps: permittivity profile at the input plane
-        field: 'TM' mode (EX), 'TE' mode (EY), or 'scalar'
-    Returns:
-        phi: (nx, ny, nmodes) complex array of mode field(s), each normalized so max|phi| = 1
-        neff: effective index/indices of the computed mode(s)
+    Calculate the modes of a dielectric waveguide using the semivectorial
+    finite difference method.
+
+    USAGE:
+        neff, phi = svmodes(wavelength, guess, nmodes, dx, dy, eps, boundary, field)
+
+    INPUT:
+        wavelength : optical wavelength (same length unit as dx, dy)
+        guess      : scalar effective-index shift; returns the eigenpairs whose
+                     effective index is closest to this guess.
+        nmodes     : number of modes to calculate.
+        dx         : horizontal grid spacing. Scalar (uniform) or a vector of
+                     length nx (number of columns of eps) for a non-uniform grid.
+        dy         : vertical grid spacing. Scalar (uniform) or a vector of
+                     length ny (number of rows of eps) for a non-uniform grid.
+        eps        : index mesh (n^2(x, y)); a 2-D array with shape (ny, nx).
+        boundary   : 4-letter string of edge conditions, N, S, E, W:
+                       boundary[0] = North, [1] = South, [2] = East, [3] = West.
+                       'A' antisymmetric, 'S' symmetric, '0' Dirichlet (zero).
+        field      : 'EX' (semivectorial Ex), 'EY' (semivectorial Ey), or
+                     'scalar' (scalar Helmholtz approximation).
+
+    OUTPUT:
+        neff       : modal effective indices, shape (nmodes,), sorted descending.
+        phi        : requested field component per mode, shape (ny, nx, nmodes),
+                     each normalized so |phi| peaks at 1. Fields sit at the
+                     *center* of each finite-difference cell.
+                     If nmodes == 1, phi is 2-D (ny, nx) and neff is a scalar.
+
+    NOTES:
+        Units are arbitrary but must be self-consistent. The discretization
+        yields A·phi = beta^2·phi; neff = beta / k with k = 2*pi / wavelength.
     """
-    nx, ny = eps.shape
 
-    # now we pad eps on all sides by one grid point
-    eps = np.pad(eps, 1, mode="edge")
+    k = 2.0 * np.pi / wavelength
 
-    # compute free-space wavevector
-    k = 2 * np.pi / wavelength
+    boundary = boundary.upper()
+    if len(boundary) != 4:
+        raise ValueError("boundary string must have exactly four characters")
+    if any(ch not in {"A", "S", "0"} for ch in boundary):
+        raise ValueError("boundary string may contain only 'A', 'S', or '0'")
 
-    dx = dx * np.ones((nx + 2, 1))
-    dy = dy * np.ones((1, ny + 2))
+    field = field.lower()
+    if field not in {"ex", "ey", "scalar"}:
+        raise ValueError("field must be 'EX', 'EY', or 'scalar'")
 
-    n = np.ones((1, nx * ny), dtype=np.complex64)
-    n[:] = (np.ones((nx, 1), dtype=np.complex64) @ (dy[:, 2 : ny + 2] + dy[:, 1 : ny + 1]) / 2).flatten("F")
+    eps = np.asarray(eps)
+    if eps.ndim != 2:
+        raise ValueError("eps must be a 2-D array")
 
-    s = np.ones((1, nx * ny), dtype=np.complex64)
-    s[:] = (np.ones((nx, 1), dtype=np.complex64) @ (dy[:, 0:ny] + dy[:, 1 : ny + 1]) / 2).flatten("F")
+    ny, nx = eps.shape
+    N = nx * ny
 
-    e = np.ones((1, nx * ny), dtype=np.complex64)
-    e[:] = ((dx[2 : nx + 2] + dx[1 : nx + 1]) / 2 @ np.ones((1, ny), dtype=np.complex64)).flatten("F")
+    eps = np.pad(eps, pad_width=1, mode="edge")
 
-    w = np.ones((1, nx * ny), dtype=np.complex64)
-    w[:] = ((dx[0:nx] + dx[1 : nx + 1]) / 2 @ np.ones((1, ny), dtype=np.complex64)).flatten("F")
+    if np.isscalar(dx):   # uniform x grid
+        dx = np.full(nx + 2, dx)
+    else:                 # nonuniform x grid
+        dx = np.pad(np.asarray(dx), pad_width=1, mode="edge")
 
-    p = np.ones((1, nx * ny), dtype=np.complex64)
-    p[:] = (dx[1 : nx + 1] @ np.ones((1, ny), dtype=np.complex64)).flatten("F")
+    if np.isscalar(dy):   # uniform y grid
+        dy = np.full(ny + 2, dy)
+    else:                 # nonuniform y grid
+        dy = np.pad(np.asarray(dy), pad_width=1, mode="edge")
 
-    q = np.ones((1, nx * ny), dtype=np.complex64)
-    q[:] = (np.ones((nx, 1), dtype=np.complex64) @ dy[:, 1 : ny + 1]).flatten("F")
+    e = np.tile((dx[1:-1] + dx[2:]) / 2, ny)
+    w = np.tile((dx[1:-1] + dx[0:-2]) / 2, ny)
+    p = np.tile(dx[1:-1], ny)
 
-    en = np.ones((1, nx * ny), dtype=np.complex64)
-    en[:] = eps[1 : nx + 1, 2 : ny + 2].flatten("F")
+    n = np.repeat((dy[1:-1] + dy[2:]) / 2, nx)
+    s = np.repeat((dy[1:-1] + dy[0:-2]) / 2, nx)
+    q = np.repeat(dy[1:-1], nx)
 
-    es = np.ones((1, nx * ny), dtype=np.complex64)
-    es[:] = eps[1 : nx + 1, 0:ny].flatten("F")
+    en = eps[2:ny + 2, 1:nx + 1].ravel(order="C")  # north
+    es = eps[0:ny, 1:nx + 1].ravel(order="C")      # south
+    ee = eps[1:ny + 1, 2:nx + 2].ravel(order="C")  # east
+    ew = eps[1:ny + 1, 0:nx].ravel(order="C")      # west
+    ep = eps[1:ny + 1, 1:nx + 1].ravel(order="C")  # center
 
-    ee = np.ones((1, nx * ny), dtype=np.complex64)
-    ee[:] = eps[2 : nx + 2, 1 : ny + 1].flatten("F")
-
-    ew = np.ones((1, nx * ny), dtype=np.complex64)
-    ew[:] = eps[0:nx, 1 : ny + 1].flatten("F")
-
-    ep = np.ones((1, nx * ny), dtype=np.complex64)
-    ep[:] = eps[1 : nx + 1, 1 : ny + 1].flatten("F")
-
-    if field.lower() == "tm":
-        an = 2 / n / (n + s)
-        as_ = 2 / s / (n + s)
-        ae = (
-            8
-            * (p * (ep - ew) + 2 * w * ew)
-            * ee
+    if field == "ex":
+        un = 2.0 / n / (n + s)
+        us = 2.0 / s / (n + s)
+        ue = (
+            8.0 * (p * (ep - ew) + 2.0 * w * ew) * ee
             / (
-                (p * (ep - ee) + 2 * e * ee) * (p**2 * (ep - ew) + 4 * w**2 * ew)
-                + (p * (ep - ew) + 2 * w * ew) * (p**2 * (ep - ee) + 4 * e**2 * ee)
+                (p * (ep - ee) + 2.0 * e * ee) * (p**2 * (ep - ew) + 4.0 * w**2 * ew)
+                + (p * (ep - ew) + 2.0 * w * ew) * (p**2 * (ep - ee) + 4.0 * e**2 * ee)
             )
         )
-        aw = (
-            8
-            * (p * (ep - ee) + 2 * e * ee)
-            * ew
+        uw = (
+            8.0 * (p * (ep - ee) + 2.0 * e * ee) * ew
             / (
-                (p * (ep - ee) + 2 * e * ee) * (p**2 * (ep - ew) + 4 * w**2 * ew)
-                + (p * (ep - ew) + 2 * w * ew) * (p**2 * (ep - ee) + 4 * e**2 * ee)
+                (p * (ep - ee) + 2.0 * e * ee) * (p**2 * (ep - ew) + 4.0 * w**2 * ew)
+                + (p * (ep - ew) + 2.0 * w * ew) * (p**2 * (ep - ee) + 4.0 * e**2 * ee)
             )
         )
-        ap = ep * k**2 - an - as_ - (ae * ep / ee) - (aw * ep / ew)
-    elif field.lower() == "te":
-        an = (
-            8
-            * (q * (ep - es) + 2 * s * es)
-            * en
+        up = ep * k**2 - un - us - ue * ep / ee - uw * ep / ew
+
+    elif field == "ey":
+        un = (
+            8.0 * (q * (ep - es) + 2.0 * s * es) * en
             / (
-                (q * (ep - en) + 2 * n * en) * (q**2 * (ep - es) + 4 * s**2 * es)
-                + (q * (ep - es) + 2 * s * es) * (q**2 * (ep - en) + 4 * n**2 * en)
+                (q * (ep - en) + 2.0 * n * en) * (q**2 * (ep - es) + 4.0 * s**2 * es)
+                + (q * (ep - es) + 2.0 * s * es) * (q**2 * (ep - en) + 4.0 * n**2 * en)
             )
         )
-        as_ = (
-            8
-            * (q * (ep - en) + 2 * n * en)
-            * es
+        us = (
+            8.0 * (q * (ep - en) + 2.0 * n * en) * es
             / (
-                (q * (ep - en) + 2 * n * en) * (q**2 * (ep - es) + 4 * s**2 * es)
-                + (q * (ep - es) + 2 * s * es) * (q**2 * (ep - en) + 4 * n**2 * en)
+                (q * (ep - en) + 2.0 * n * en) * (q**2 * (ep - es) + 4.0 * s**2 * es)
+                + (q * (ep - es) + 2.0 * s * es) * (q**2 * (ep - en) + 4.0 * n**2 * en)
             )
         )
-        ae = 2 / e / (e + w)
-        aw = 2 / w / (e + w)
-        ap = ep * k**2 - (an * ep / en) - (as_ * ep / es) - ae - aw
-    elif field.lower() == "scalar":
-        an = 2 / n / (n + s)
-        as_ = 2 / s / (n + s)
-        ae = 2 / e / (e + w)
-        aw = 2 / w / (e + w)
-        ap = ep * k**2 - an - as_ - ae - aw
+        ue = 2.0 / e / (e + w)
+        uw = 2.0 / w / (e + w)
+        up = ep * k**2 - un * ep / en - us * ep / es - ue - uw
+
+    else:  # field == "scalar"
+        un = 2.0 / n / (n + s)
+        us = 2.0 / s / (n + s)
+        ue = 2.0 / e / (e + w)
+        uw = 2.0 / w / (e + w)
+        up = ep * k**2 - un - us - ue - uw
+
+    jj = np.arange(nx * ny).reshape((ny, nx), order="C")
+
+    # NORTH boundary
+    jb = jj[ny - 1, :].ravel(order="C")
+    if boundary[0] == "S":
+        up[jb] += un[jb]
+    elif boundary[0] == "A":
+        up[jb] -= un[jb]
+    # SOUTH boundary
+    jb = jj[0, :].ravel(order="C")
+    if boundary[1] == "S":
+        up[jb] += us[jb]
+    elif boundary[1] == "A":
+        up[jb] -= us[jb]
+    # EAST boundary
+    jb = jj[:, nx - 1].ravel(order="C")
+    if boundary[2] == "S":
+        up[jb] += ue[jb]
+    elif boundary[2] == "A":
+        up[jb] -= ue[jb]
+    # WEST boundary
+    jb = jj[:, 0].ravel(order="C")
+    if boundary[3] == "S":
+        up[jb] += uw[jb]
+    elif boundary[3] == "A":
+        up[jb] -= uw[jb]
+
+    jall = jj.ravel(order="C")
+    jn = jj[1:ny, :].ravel(order="C")        # north neighbor indices
+    js = jj[0:ny - 1, :].ravel(order="C")    # south neighbor indices
+    je = jj[:, 1:nx].ravel(order="C")        # east neighbor indices
+    jw = jj[:, 0:nx - 1].ravel(order="C")    # west neighbor indices
+
+    rows = np.concatenate([jall, jw, je, js, jn])
+    cols = np.concatenate([jall, je, jw, jn, js])
+    data = np.concatenate([up[jall], ue[jw], uw[je], un[js], us[jn]])
+
+    A = coo_matrix((data, (rows, cols)), shape=(N, N)).tocsr()
+    A.eliminate_zeros()
+
+    # Solve A·phi = beta^2·phi by shift-invert. SciPy's eigs(sigma=...) factorizes
+    # (A - sigma*I) with SuperLU internally -- no external sparse solver needed.
+    shift = (2.0 * np.pi * guess / wavelength) ** 2  # = (k*guess)^2
+    vals, vecs = eigs(A, k=nmodes, sigma=shift, which="LM", tol=1e-8)
+
+    if np.iscomplexobj(A.data):
+        phi = np.zeros((ny, nx, nmodes), dtype=complex)
     else:
-        raise ValueError(f"field should be 'TM', 'TE', or 'scalar'. Invalid field: '{field}'")
+        phi = np.zeros((ny, nx, nmodes), dtype=float)
+        if not np.allclose(vals.imag, 0.0, 1e-12):
+            warnings.warn("Unexpected complex eigenvalues, discarding imaginary parts", RuntimeWarning)
+        vals = vals.real
+        if not np.allclose(vecs.imag, 0.0, 1e-12):
+            warnings.warn("Unexpected complex eigenvectors, discarding imaginary parts", RuntimeWarning)
+        vecs = vecs.real
 
-    ii = np.zeros((nx, ny), dtype=int)
-    ii[:] = np.reshape(np.arange(0, nx * ny, dtype=int), (nx, ny), order="F")
+    # neff from eigenvalues beta^2: neff = sqrt(beta^2) / k
+    neff = np.sqrt(vals) / k
 
-    iall = np.zeros((1, nx * ny), dtype=int)
-    iall[:] = ii.flatten("F")
-
-    in_ = np.zeros((1, nx * (ny - 1)), dtype=int)
-    in_[:] = ii[0:nx, 1:ny].flatten("F")
-
-    is_ = np.zeros((1, nx * (ny - 1)), dtype=int)
-    is_[:] = ii[0:nx, 0 : (ny - 1)].flatten("F")
-
-    ie = np.zeros((1, (nx - 1) * ny), dtype=int)
-    ie[:] = ii[1:nx, 0:ny].flatten("F")
-
-    iw = np.zeros((1, (nx - 1) * ny), dtype=int)
-    iw[:] = ii[0 : (nx - 1), 0:ny].flatten("F")
-
-    A = csr_matrix(
-        (
-            np.concatenate((ap[0, iall], ae[0, iw], aw[0, ie], an[0, is_], as_[0, in_]), axis=1).squeeze(),
-            (
-                np.concatenate((iall, iw, ie, is_, in_), axis=1).squeeze(),
-                np.concatenate((iall, ie, iw, in_, is_), axis=1).squeeze(),
-            ),
-        )
-    )
-
-    shift = (2 * np.pi * guess / wavelength) ** 2
-
-    # [v,d] = eigs(A,speye(size(A)),nmodes,shift,options);
-    d, v = eigs(A=A, k=nmodes, M=eye_array(*A.shape, dtype=A.dtype), sigma=shift, tol=1.0e-8)
-
-    neff = wavelength * np.sqrt(np.diag(d)) / (2 * np.pi)
-    phi = np.zeros((nx, ny, nmodes), dtype=np.complex64)
-    temp = np.zeros((nx, ny), dtype=np.complex64)
-    for k in range(0, nmodes):
-        temp[:] = np.reshape(-v[:, k] / np.max(np.abs(v[:, k])), (nx, ny), order="F")
-        phi[:, :, k] = temp
-
-    return phi, neff
-
-
-# -----------------------------------------------------------------------------
-# Starter-kit convenience wrappers
-# -----------------------------------------------------------------------------
-# The examples here are 2D, so the waveguide cross-section transverse to the
-# propagation direction is a single (1D) axis: the guide width for a top-down
-# (x-y) layout, or the guide thickness for a side-view (x-z) layout. The helpers
-# below run the 2D ``svmodes`` solver on a thin, transversely-invariant slab to
-# obtain that 1D fundamental mode, then package it as a wavesimpro source.
-
-
-def solve_waveguide_modes(
-    index_profile: Sequence[complex],
-    pixel_size: float,
-    wavelength: float,
-    nmodes: int = 1,
-    field: str = "scalar",
-    guess: complex = None,
-):
-    """Solve the lowest-order guided modes of a 1D transverse refractive-index profile.
-
-    ``svmodes`` is a 2D cross-section solver, so to obtain *1D* transverse modes
-    (the guide width for a top-down x-y layout, or the guide thickness for a
-    side-view x-z layout of a 2D simulation) this builds a 1-pixel-wide
-    cross-section and gives that second axis a very large grid spacing. The large
-    spacing drives the second axis's ``1/dy**2`` finite-difference term to ~0, so
-    it contributes nothing to ``beta**2`` and the eigenvalue reduces to the pure
-    1D lateral problem (verified to reproduce a direct 1D finite-difference solve
-    to ~4 digits for every guided mode). A single column is used so higher-order
-    modes are not spuriously triplicated by a multi-pixel invariant axis.
-
-    Modes are returned sorted by descending effective index (mode 0 = fundamental),
-    which is what multimode-interference beat-length design needs.
-
-    Args:
-        index_profile: 1D refractive-index (n, not n^2) sampled across the
-            transverse axis, on the same grid the source will occupy.
-        pixel_size: grid spacing in micrometer (μm) along the transverse axis.
-        wavelength: wavelength in micrometer (μm).
-        nmodes: number of lowest-order modes to return.
-        field: 'TE' (E along the transverse axis), 'TM', or 'scalar' (default).
-        guess: effective-index guess for the shift-invert eigensolve. Defaults to
-            the peak refractive index of ``index_profile`` (the core index).
-    Returns:
-        phi: (len(index_profile), nmodes) complex mode amplitudes, each column
-            normalized to max|phi| = 1, ordered by descending neff.
-        neff: length-``nmodes`` complex array of effective indices (descending).
-    """
-    n_profile = np.asarray(index_profile, dtype=np.complex64).ravel()
-    eps2d = (n_profile**2)[:, None].astype(np.complex64)  # single invariant column
-    if guess is None:
-        guess = float(np.real(n_profile).max())
-
-    # Decouple the invariant axis: spacing >> 1 so its curvature term ~0.
-    invariant_spacing = 1000.0
-    phi, neff = svmodes(wavelength, guess, int(nmodes), pixel_size, invariant_spacing, eps2d, field)
-
-    neff = np.diag(neff)  # (nmodes,)
-    phi_1d = phi[:, 0, :]  # the single column -> (len, nmodes)
-
-    order = np.argsort(-neff.real)  # fundamental (largest neff) first
+    order = np.argsort(-neff.real)  # sort modes by descending effective index
     neff = neff[order]
-    phi_1d = phi_1d[:, order]
-    for k in range(phi_1d.shape[1]):
-        peak = np.max(np.abs(phi_1d[:, k]))
-        if peak > 0:
-            phi_1d[:, k] = phi_1d[:, k] / peak
-    return phi_1d.astype(np.complex64), neff.astype(np.complex64)
+    vecs = vecs[:, order]
+
+    for m in range(nmodes):
+        v = vecs[:, m]
+        vmax = np.max(np.abs(v))
+        norm = 1.0 if vmax == 0 else vmax
+        phi[:, :, m] = (v / norm).reshape((ny, nx), order="C")
+
+    if nmodes == 1:
+        phi = phi[:, :, 0]
+        neff = neff[0]
+
+    return neff, phi
 
 
-def solve_waveguide_mode(
-    index_profile: Sequence[complex],
-    pixel_size: float,
-    wavelength: float,
-    field: str = "scalar",
-    guess: complex = None,
-):
-    """Solve the fundamental guided mode of a 1D transverse refractive-index profile.
+# Note on field labels: the semivectorial formulations 'EX'/'EY' map to the
+# historical 'TM'/'TE' labels respectively -- 'EX' = E along the horizontal axis
+# (the guide width here), 'EY' = E along the vertical axis. Quasi-TE for a wide,
+# thin SOI core is therefore field='EX'.
 
-    Thin wrapper over ``solve_waveguide_modes`` (nmodes=1) returning the single
-    fundamental profile and its effective index. See that function for details.
 
-    Returns:
-        phi_1d: 1D complex mode amplitude, same length as index_profile, max|phi|=1.
-        neff: complex effective index of the fundamental mode.
-    """
-    phi, neff = solve_waveguide_modes(index_profile, pixel_size, wavelength, nmodes=1, field=field, guess=guess)
-    return phi[:, 0], complex(neff[0])
+# -----------------------------------------------------------------------------
+# Starter-kit convenience: package a solved mode as a wavesimpro source
+# -----------------------------------------------------------------------------
+# For genuine 3D simulations the transverse (y, z) cross-section is a real 2D
+# index map = svmodes' native input, so call ``svmodes`` directly and feed the
+# resulting 2D mode profile to ``mode_source`` with ``source_plane='yz'``.
 
 
 def mode_source(
@@ -270,21 +257,25 @@ def mode_source(
     pixel_size: float,
     amplitude: complex = 1.0,
 ):
-    """Package a precomputed 1D guided-mode profile as a wavesimpro source.
+    """Package a precomputed guided-mode profile as a wavesimpro source.
 
     Mirrors the (source_values, position) convention of ``wsutils.create_source``
     (e.g. ``gaussian_beam``), so the result can be passed straight to
-    ``simulate(sources=[mode_source(...)])``. Only single-axis source planes
-    ('x', 'y', or 'z') are supported, matching the 1D transverse mode of a 2D
-    simulation.
+    ``simulate(sources=[mode_source(...)])``. Handles both a 1D profile spanning a
+    single transverse axis ('x'/'y'/'z') and a 2D profile spanning a transverse
+    plane ('xy'/'yz'/'xz') -- the latter is the genuine 3D waveguide launch: a 2D
+    mode profile on a fixed-propagation-coordinate plane.
 
     Args:
-        mode_profile: 1D complex mode amplitude (e.g. from ``solve_waveguide_mode``).
+        mode_profile: complex mode amplitude. 1D for a single-axis ``source_plane``;
+            2D for a two-axis ``source_plane`` (its two axes ordered as the sorted
+            plane string, e.g. ``'yz'`` -> profile shape ``(n_y, n_z)``).
         origin: 'center' or 'topleft' -- how ``position`` locates the profile along
-            the transverse (source_plane) axis.
+            the transverse (source_plane) axes.
         position: 3 floats (x, y, z) for scalar/Helmholtz, or 4 floats
             (polarization axis, x, y, z) for vector/Maxwell, in micrometer (μm).
-        source_plane: the single transverse axis the profile spans: 'x', 'y', or 'z'.
+        source_plane: the transverse axis/axes the profile spans: a single axis
+            ('x'/'y'/'z') or a plane ('xy'/'yz'/'xz').
         pixel_size: grid spacing in micrometer (μm).
         amplitude: scalar to scale the source by. Default 1.0.
     Returns:
@@ -293,21 +284,25 @@ def mode_source(
     if origin not in ["center", "topleft"]:
         raise ValueError(f"Specify origin from the options ['center', 'topleft']. Invalid origin: '{origin}'")
     source_plane = "".join(sorted(source_plane.lower()))
-    if source_plane not in ["x", "y", "z"]:
-        raise ValueError(f"mode_source supports a single transverse axis 'x', 'y', or 'z'. Invalid source_plane: '{source_plane}'")
+    if source_plane not in ["x", "y", "z", "xy", "yz", "xz"]:
+        raise ValueError(f"source_plane must be one of x, y, z, xy, yz, xz. Invalid: '{source_plane}'")
 
-    check_source_parameters(position)
+    profile = np.asarray(mode_profile, dtype=np.complex64) * amplitude
+    if len(source_plane) != profile.ndim:
+        raise ValueError(f"mode_profile.ndim ({profile.ndim}) must match the number of axes in source_plane '{source_plane}' ({len(source_plane)})")
+
+    check_source_parameters(position, shape=profile.shape, source_plane=source_plane)
     p = polarization_(position)
 
-    source_values = np.asarray(mode_profile, dtype=np.complex64).ravel() * amplitude
-    m = source_values.shape[0]
-    source_values = expand_source_shape(source_values, source_plane)
+    span_px = profile.shape  # samples along each plane axis, in plane-string order
+    source_values = expand_source_shape(profile, source_plane)
     source_values = source_values[None, ...] if p else source_values  # add polarization dim if present
 
     position = np.asarray(position)
     position[p:] = position[p:] / pixel_size
     if origin == "center":
-        position[p + "xyz".index(source_plane)] -= m // 2
+        for ax, m in zip(source_plane, span_px):
+            position[p + "xyz".index(ax)] -= m // 2
     position = tuple(position.astype(int))
 
     return source_values.astype(np.complex64), position

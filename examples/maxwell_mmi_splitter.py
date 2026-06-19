@@ -1,31 +1,33 @@
 """
-Maxwell 2D multimode-interference (MMI) 1x2 splitter
+Maxwell 3D multimode-interference (MMI) 1x2 splitter
 ====================================================
-A 1x2 MMI power splitter: a single-mode access waveguide feeds a short, wide
-*multimode* section; the input excites several lateral modes that beat against
-each other, and at the right length the field reforms into two identical copies
-of the input -- a 50/50 split -- which are caught by two output waveguides. This
-"self-imaging" is the workhorse splitter/combiner of silicon photonics.
+A 1x2 MMI power splitter on a silicon-on-insulator (SOI) platform: a single-mode
+access waveguide feeds a short, wide *multimode* section; the input excites
+several modes that beat against each other, and at the right length the field
+reforms into two identical copies of the input -- a 50/50 split -- caught by two
+output waveguides. This "self-imaging" is the workhorse splitter/combiner of
+silicon photonics.
 
-Top-down view (the simulation plane):
-  * axis 0 = x = propagation along the chip,
-  * axis 1 = y = lateral (across the waveguides),
-  * axis 2 = z = thin / periodic (an effective-index 2D reduction of the slab).
-
-Effective-index model: the 220 nm Si slab is collapsed to a 2D problem by using
-its slab effective index (~2.84) as the in-plane core index in an SiO2 cladding.
+This is a genuine 3D structure (no effective-index reduction): a 220 nm-thick
+silicon core embedded in SiO2, with real material indices. The simulation axes are
+  * x = propagation along the chip,
+  * y = lateral (across the waveguides, the guide WIDTH direction),
+  * z = vertical (the 220 nm layer-stack / core-thickness direction).
+The waveguide cross-section transverse to propagation is the real 2D (y, z) plane,
+which is exactly the input the finite-difference mode solver ``wsutils.svmodes``
+expects -- so the device is *designed by the mode solver itself*.
 
 Why a full-wave solver: self-imaging is a coherent interference effect of many
 guided modes; the split ratio and length depend on the modal phase relations, a
-near-field interference pattern with no ray-optics description. MBS resolves the
-whole multimode beat over the device length with no numerical dispersion to
-corrupt the modal phases.
+near-field interference pattern with no ray-optics description. The Modified Born
+Series solver resolves the whole multimode beat over the device length with no
+numerical dispersion to corrupt the modal phases.
 
-The device is *designed by the mode solver itself*: ``solve_waveguide_modes``
-(the svmodes finite-difference solver) gives the multimode-section modes and
-propagation constants; propagating the input field through them (a modal
-expansion) locates the two-image plane and the output positions. The full-wave
-``simulate`` run then validates that design. TE polarization (E_z out of plane).
+Design flow: ``svmodes`` gives the multimode-section modes and propagation
+constants on the (y, z) cross-section; a modal expansion of the launched access
+mode locates the two-image plane and the output positions. The full-wave
+``simulate`` run then validates that design. Quasi-TE polarization (dominant E
+along the guide width, i.e. y).
 """
 
 import os
@@ -35,60 +37,77 @@ from time import time
 import numpy as np
 
 from wavesimpro import simulate
-from wsutils import (
-    index_canvas,
-    add_waveguide,
-    permittivity_2d,
-    solve_waveguide_modes,
-    solve_waveguide_mode,
-    mode_source,
-    OUTPUT_DIR,
-)
+from wsutils import index_canvas, add_waveguide, svmodes, mode_source, OUTPUT_DIR
 
 # --- Parameters (edit these to rescale) --------------------------------------
 wavelength = 1.55  # design wavelength in micrometer (μm)
-pixel_size = 0.04  # grid spacing in micrometer (μm)
+pixel_size = 0.025  # grid spacing (μm); ~9 px across the 220 nm core thickness
 
-n_core = 2.835  # in-plane core index ~ slab effective index of a 220 nm SOI core
-n_clad = 1.444  # SiO2 cladding
+n_si = 3.476   # silicon core
+n_clad = 1.444  # SiO2 cladding (buried oxide below + oxide over-cladding)
 
-W_mmi = 3.0  # multimode section width (μm)
-w_wg = 0.5  # single-mode access/output waveguide width (μm)
+t_core = 0.22  # Si core thickness, vertical z (μm)
+W_mmi = 3.0    # multimode-section width, lateral y (μm)
+w_wg = 0.45    # single-mode access/output waveguide width (μm)
 
-sim_y = W_mmi + 4.0  # lateral domain: MMI width + cladding margin (μm)
-yc = sim_y / 2  # transverse center
+# Transverse window (y lateral, z vertical), core centered in both.
+sim_y = W_mmi + 3.0  # lateral domain: MMI width + cladding/boundary margin (μm)
+sim_z = t_core + 2.4  # vertical domain: core + oxide margin above/below (μm)
+yc = sim_y / 2
+zc = sim_z / 2
 
-x_source = 2.5  # mode launch position (μm), clear of the boundary
-mmi_start = 4.0  # x where the multimode section begins (μm)
-boundary_width = 1.5  # absorbing boundary width (μm)
+x_source = 2.5       # mode launch position (μm), clear of the boundary
+mmi_start = 4.0      # x where the multimode section begins (μm)
+boundary_width = 1.0  # absorbing boundary width (μm), all six faces
+
+ny = int(round(sim_y / pixel_size))
+nz = int(round(sim_z / pixel_size))
+# core z-band (vertical extent of the silicon layer)
+kz0 = int(round((zc - t_core / 2) / pixel_size))
+kz1 = int(round((zc + t_core / 2) / pixel_size))
+
+
+def cross_section(core_width):
+    """Permittivity n^2 of a (y, z) cross-section: a ``core_width`` x ``t_core``
+    Si core centered in the window, embedded in SiO2. Returns shape (nz, ny) --
+    svmodes' (vertical, horizontal) = (z, y) convention."""
+    n = np.full((nz, ny), n_clad, dtype=np.complex64)
+    jy0 = int(round((yc - core_width / 2) / pixel_size))
+    jy1 = int(round((yc + core_width / 2) / pixel_size))
+    n[kz0:kz1, jy0:jy1] = n_si
+    return (n ** 2)
+
 
 # --- Design the MMI with the integrated mode solver --------------------------
-# Build the lateral index profile of the multimode section and of the access
-# waveguide, both sampled on the full transverse grid.
-ny = int(sim_y / pixel_size)
+# Access-waveguide fundamental mode = the launched field. Quasi-TE -> field 'EX'
+# (E along the horizontal/y = guide width); see wsutils.svmodes conventions.
+# svmodes returns (neff, phi); guess = core index n_si.
+neff_in, phi_in = svmodes(wavelength, n_si, 1, pixel_size, pixel_size, cross_section(w_wg), "0000", "EX")
+e_in = phi_in.real  # (nz, ny)
+
+# Multimode-section modes: solve a generous set, keep the guided ones (neff > clad).
+n_solve = 14
+neff_mmi, phi_mmi = svmodes(wavelength, n_si, n_solve, pixel_size, pixel_size, cross_section(W_mmi), "0000", "EX")
+guided = neff_mmi.real > n_clad + 1e-3
+neff_mmi = neff_mmi[guided]
+phi_mmi = phi_mmi[:, :, guided].real  # (nz, ny, M)
+beta = 2 * np.pi * neff_mmi.real / wavelength
+M = phi_mmi.shape[2]
+print(f"Access neff = {neff_in.real:.4f}; MMI guided modes = {M}")
+print(f"MMI beat length L_pi = pi/(b0-b1) = {np.pi / (beta[0] - beta[1]):.2f} um")
+
+# Modal expansion: coefficients = 2D overlap of the input with each MMI mode.
+norm_m = np.sum(phi_mmi ** 2, axis=(0, 1))  # (M,)
+coeff = np.sum(e_in[:, :, None] * phi_mmi, axis=(0, 1)) / norm_m  # (M,)
+
+# Propagate the modal field; evaluate intensity on the mid-core-height z-plane and
+# scan along x to find the first strong two-fold image (two lobes at +/- W/4).
+z_mid = (kz0 + kz1) // 2
 y = np.arange(ny) * pixel_size
-
-mmi_profile = np.full(ny, n_clad, dtype=np.complex64)
-mmi_profile[np.abs(y - yc) < W_mmi / 2] = n_core
-
-access_profile = np.full(ny, n_clad, dtype=np.complex64)
-access_profile[np.abs(y - yc) < w_wg / 2] = n_core
-
-# Multimode-section modes (keep only the guided ones) and the input field.
-phi_modes, neff_modes = solve_waveguide_modes(mmi_profile, pixel_size, wavelength, nmodes=10, field="scalar", guess=n_core)
-guided = neff_modes.real > n_clad
-phi_modes = phi_modes[:, guided].real
-beta = 2 * np.pi * neff_modes[guided].real / wavelength
-e_in, _ = solve_waveguide_mode(access_profile, pixel_size, wavelength, field="scalar", guess=n_core)
-e_in = e_in.real
-print(f"MMI: {phi_modes.shape[1]} guided modes; beat length L_pi = {np.pi / (beta[0] - beta[1]):.2f} um")
-
-# Modal expansion: coefficients = overlap of the input with each mode.
-coeff = (e_in @ phi_modes) / np.sum(phi_modes**2, axis=0)
-
-# Propagate the modal field and find the first strong two-fold image plane.
-x_scan = np.linspace(0.0, 1.6 * np.pi / (beta[0] - beta[1]), 600)
-field_scan = (coeff * np.exp(-1j * beta[None, :] * x_scan[:, None])) @ phi_modes.T
+x_scan = np.linspace(0.0, 1.8 * np.pi / (beta[0] - beta[1]), 700)
+# field(x, y) at mid height = sum_m coeff_m phi_m(z_mid, y) exp(-i beta_m x)
+phi_mid = phi_mmi[z_mid, :, :]  # (ny, M)
+field_scan = (coeff * np.exp(-1j * beta[None, :] * x_scan[:, None])) @ phi_mid.T  # (Nx, ny)
 I_scan = np.abs(field_scan) ** 2
 
 
@@ -96,7 +115,6 @@ def _band(y_target, half=0.3):
     return np.abs(y - y_target) < half
 
 
-# Score: reward two side lobes at +/- W/4, penalize a central lobe; ignore x near input.
 score = np.array([
     I_scan[i, _band(yc - W_mmi / 4)].sum() + I_scan[i, _band(yc + W_mmi / 4)].sum() - 2 * I_scan[i, _band(yc)].sum()
     for i in range(len(x_scan))
@@ -104,34 +122,39 @@ score = np.array([
 sel = x_scan > 3.0
 L_mmi = float(x_scan[sel][np.argmax(score[sel])])
 
-# Two output lobe positions at that plane (from the modal field).
 i_img = int(np.argmin(np.abs(x_scan - L_mmi)))
 prof = I_scan[i_img]
 y_up = y[y < yc][np.argmax(prof[y < yc])]
 y_lo = y[y >= yc][np.argmax(prof[y >= yc])]
+mmi_end = mmi_start + L_mmi
 print(f"Designed MMI length L_mmi = {L_mmi:.2f} um; output centers y = {y_up:.2f}, {y_lo:.2f} um")
 
-mmi_end = mmi_start + L_mmi
+# --- Build the 3D geometry ---------------------------------------------------
+# In-plane (top-down x-y) index pattern at core height, then extrude into the
+# 220 nm z core-band; everything else is SiO2.
+sim_x = mmi_end + 4.0  # room for the output waveguides
+nxy = index_canvas([sim_x, sim_y], pixel_size, background=n_clad)  # (nx, ny)
+add_waveguide(nxy, pixel_size, (0, mmi_start), yc, w_wg, n_si)        # input access waveguide
+add_waveguide(nxy, pixel_size, (mmi_start, mmi_end), yc, W_mmi, n_si)  # multimode section
+add_waveguide(nxy, pixel_size, (mmi_end, sim_x), y_up, w_wg, n_si)     # output 1
+add_waveguide(nxy, pixel_size, (mmi_end, sim_x), y_lo, w_wg, n_si)     # output 2
+nx = nxy.shape[0]
 
-# --- Build the geometry ------------------------------------------------------
-sim_size = np.array([mmi_end + 4.0, sim_y])  # leave room for the output waveguides
-n = index_canvas(sim_size, pixel_size, background=n_clad)
-add_waveguide(n, pixel_size, (0, mmi_start), yc, w_wg, n_core)  # input access waveguide
-add_waveguide(n, pixel_size, (mmi_start, mmi_end), yc, W_mmi, n_core)  # multimode section
-add_waveguide(n, pixel_size, (mmi_end, sim_size[0]), y_up, w_wg, n_core)  # output 1
-add_waveguide(n, pixel_size, (mmi_end, sim_size[0]), y_lo, w_wg, n_core)  # output 2
+permittivity = np.full((nx, ny, nz), n_clad ** 2, dtype=np.complex64)
+permittivity[:, :, kz0:kz1] = (nxy ** 2)[:, :, None]
+mvox = nx * ny * nz / 1e6
+print(f"Grid: {nx} x {ny} x {nz} = {mvox:.1f} Mvoxel  (px={pixel_size} um)")
 
-permittivity = permittivity_2d(n)
-nx = permittivity.shape[0]
-
-# --- Source: fundamental mode of the access waveguide ------------------------
+# --- Source: launched access mode over the (y, z) plane ----------------------
+# svmodes phi is (nz, ny); mode_source's 'yz' plane wants (n_y, n_z) -> transpose.
 source_values, source_position = mode_source(
-    e_in.astype(np.complex64),
+    e_in.T.astype(np.complex64),       # (ny, nz)
     origin="topleft",
-    position=[2, x_source, 0.0, 0.0],  # z-polarized (TE), full-height profile from y=0
-    source_plane="y",
+    position=[1, x_source, 0.0, 0.0],  # y-polarized (quasi-TE); profile fills the y,z window
+    source_plane="yz",
     pixel_size=pixel_size,
 )
+
 
 # --- Run the simulation ------------------------------------------------------
 print("Running simulation...")
@@ -142,40 +165,36 @@ u, iterations, residual_norm = simulate(
     wavelength=wavelength,
     pixel_size=pixel_size,
     boundary_width=boundary_width,
-    periodic=(False, False, True),  # 2D: uniform out of plane
+    periodic=(False, False, False),  # genuine 3D: absorbing on all six faces
     use_gpu=True,
 )
 print(f"Time {time() - start:.1f} s; Iterations {iterations}; Residual {residual_norm:.2e}")
 
-# E_z field as a 2D (nx, ny) slice
-ez = u[2]
-if ez.ndim == 3:
-    ez = ez[:, :, ez.shape[2] // 2]
+# Visualization cut-plane: top-down slice at mid core height.
+ey = u[1]  # dominant (quasi-TE) component
+field_top = ey[:, :, z_mid]
 
-# Restore a sane SIGINT handler before plotting.
 try:
     signal.signal(signal.SIGINT, signal.default_int_handler)
 except (ValueError, TypeError):
     pass
 
-# The money shot: the multimode interference "carpet" inside the MMI section and
-# the clean 50/50 split into the two output waveguides.
 import matplotlib.pyplot as plt
 from matplotlib.colors import LogNorm
 
-intensity = np.abs(ez) ** 2
+intensity = np.abs(field_top) ** 2
 intensity /= intensity.max()
-extent = [0, sim_size[0], sim_size[1], 0]
+extent = [0, sim_x, sim_y, 0]
 
 plt.figure(figsize=(11, 4.5))
 plt.imshow(intensity.T, cmap="inferno", extent=extent, norm=LogNorm(vmin=1e-3, vmax=1.0), aspect="equal")
 cbar = plt.colorbar(fraction=0.025, pad=0.02)
-cbar.ax.set_title(r"$|E_z|^2$")
+cbar.ax.set_title(r"$|E_y|^2$")
 plt.axvline(mmi_start, color="cyan", lw=0.5, alpha=0.4)
 plt.axvline(mmi_end, color="cyan", lw=0.5, alpha=0.4)
 plt.xlabel(r"$x~(\mu m)$ -- propagation")
 plt.ylabel(r"$y~(\mu m)$ -- lateral")
-plt.title(f"1x2 MMI splitter: self-imaging 50/50 split (W={W_mmi} um, L={L_mmi:.1f} um)")
+plt.title(f"3D 1x2 MMI splitter: self-imaging 50/50 split (W={W_mmi} um, L={L_mmi:.1f} um, mid-core z)")
 plt.tight_layout()
 
 os.makedirs(OUTPUT_DIR, exist_ok=True)

@@ -19,7 +19,7 @@ from .create_source import (
     polarization_
 )
 from .plotting import plot_computed, plot_computed_and_reference, OUTPUT_DIR
-from .svmodes import svmodes, solve_waveguide_mode, solve_waveguide_modes, mode_source
+from .svmodes import svmodes, mode_source
 from .layout import (
     index_canvas,
     add_rect,
