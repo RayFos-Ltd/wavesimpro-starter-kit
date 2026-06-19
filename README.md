@@ -103,7 +103,7 @@ on the path, so the example scripts run from anywhere with no `sys.path` jugglin
 The simulations run on the WaveSimPro cloud, so the `wavesimpro` client needs an API key to
 authenticate. Once you've [registered](https://studio.rayfos.com/), get one here:
 
-1. Sign in and open **[studio.rayfos.com/api](https://studio.rayfos.com/api)**.
+1. Sign in and open **[studio.rayfos.com/api-access](https://studio.rayfos.com/api-access)**.
 2. Use a key you already have, or click **Create** to generate a new one, and copy it.
 
 The first time you run a simulation, the `wavesimpro` client detects that it isn't configured yet
@@ -149,3 +149,12 @@ wavesimpro-starter-kit/
 [`wavesim_py`](https://github.com/IvoVellekoop/wavesim_py) project (Ivo Vellekoop, Swapnil Mache —
 University of Twente); the `LICENSE` file retains that original copyright notice alongside
 Rayfos Ltd.
+
+The waveguide mode solver in [`wsutils/svmodes.py`](wsutils/svmodes.py) (the `svmodes`
+finite-difference semi-vectorial eigenmode solver) is vendored from the MIT-licensed
+[`modesolver`](https://github.com/thomas-e-murphy/modesolver) package
+(© 2025 Thomas E. Murphy), which implements the method of A. B. Fallahkhair, K. S. Li and
+T. E. Murphy, *"Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides"*,
+J. Lightwave Technol. **26**(11), 1423–1431 (2008),
+[doi:10.1109/JLT.2008.923643](https://doi.org/10.1109/JLT.2008.923643). Its full copyright and
+permission notice are retained in the `LICENSE` file under *Third-party components*.
