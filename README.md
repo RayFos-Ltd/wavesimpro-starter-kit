@@ -10,6 +10,18 @@ thin client that talks to it.
 > - **Register / sign in:** **[studio.rayfos.com](https://studio.rayfos.com/)**
 > - **Product overview:** **[rayfos.com/wavesimpro](https://www.rayfos.com/wavesimpro)**
 
+> ### 👁️ Scripting power, plus the WaveSimPro Cloud Web GUI to see it
+> This kit gives you the best of both: the **freedom and power of scripting** to build and
+> submit simulations from Python (your own code, or the `examples/`), *and* the
+> **interactive WaveSimPro Cloud Web GUI** to explore what comes back. What's easy to miss
+> is that **every simulation you submit — its model and its results — is also waiting for you
+> in the Web GUI at [studio.rayfos.com](https://studio.rayfos.com/)**, where you can browse,
+> visualise, and inspect it interactively. It's by far the easiest way to explore a 3-D field
+> or compare runs — don't rely only on the plots the scripts save locally.
+>
+> *(You can also build and run simulations entirely in the Web GUI, without scripting — but
+> that's outside the scope of this kit.)*
+
 It contains **only** what a user of `wavesimpro` needs to get going:
 
 - **`wsutils/`** — small, *engine-free* helper utilities to build inputs and inspect outputs:

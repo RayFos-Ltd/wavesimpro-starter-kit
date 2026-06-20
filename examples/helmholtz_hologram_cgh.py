@@ -3,7 +3,7 @@ Computer-generated hologram (CGH) — a diffractive optical element projects an 
 ====================================================================================
 A flat, wavelength-thin **phase plate** (a diffractive optical element, DOE) is
 illuminated by a single plane wave and, purely by diffraction, reconstructs a
-recognizable image — here the word mark "WaveSim / Pro" — in mid-air a short
+recognizable image — here the word mark "Wave / Sim" — in mid-air a short
 distance downstream. There is no lens and no moving part: the entire image is
 encoded in the height map of a transparent relief whose features are wavelength-
 scale. The field at the reconstruction plane *is* the picture.
@@ -24,8 +24,8 @@ so the DOE is a transparent glass relief whose local height encodes the phase. T
 script's job is to rasterize that relief into the per-voxel permittivity grid and
 let the solver propagate the real field — the phase-retrieval is upstream.
 
-Quality settings used here (vs a quick first pass)
---------------------------------------------------
+Quality settings (trade runtime for a crisper image)
+----------------------------------------------------
 Four levers, all on by default, trade voxels/runtime for a crisper image:
   1. **Finer grid** — ``pixel_size = λ/6`` resolves the kinoform's wide-angle
      scatter instead of dumping it into the background.
@@ -122,21 +122,49 @@ n_bg = 1.0   # air (background and reconstruction medium)
 
 # (#4) Aperture larger than the image → more DOE space-bandwidth; the image fills only
 # image_fraction of it and the dark guard border is where GS dumps reconstruction noise.
-aperture = 38.0        # side of the square DOE aperture (illumination + relief), μm
-image_fraction = 0.70  # fraction of the aperture the target image spans (rest = dark guard)
+aperture = 48.0        # side of the square DOE aperture (illumination + relief), μm. With
+#                        image_fraction this sets the image size and the speckle grain
+#                        (δ ≈ λ·z_rec/aperture): a larger aperture gives larger, cleaner
+#                        letters that sit on a finer speckle background, at more voxels.
+image_fraction = 0.80  # fraction of the aperture the target image spans; the rest is the dark
+#                        guard border where the Gerchberg–Saxton design dumps its reconstruction
+#                        noise. Smaller = cleaner but smaller image, larger = bigger image.
 z_rec = 48.0           # reconstruction distance from the DOE exit plane, μm
 
-target_text = "WaveSim\nPro"  # the image the hologram reconstructs (line break replaces "-")
+target_text = "Wave\nSim"  # the wordmark the hologram reconstructs (a newline starts a new line).
+#                            Works best as 2 short lines (≤ 3–4 letters each): fewer, larger
+#                            glyphs reconstruct more cleanly than many small ones.
+target_fontsize = 50  # glyph size on the render canvas — controls how much of the canvas the text
+#                       fills (and its rendered detail). The image's physical size on the
+#                       reconstruction plane is set by aperture × image_fraction, not by this.
+target_rotate_k = 1  # rotate the target image by k*90° (np.rot90 convention). Set so the
+#                      reconstruction reads upright in the 3D Web GUI; the local 2D Figure 1
+#                      panel then shows it rotated, which is expected. -1 = clockwise.
 
 # (#2) Band-limit the target: binarize the rendered glyphs, then lightly blur so the DOE
 # is asked only for spatial frequencies it can deliver (sharp edges → speckle).
 target_binarize = True
 target_blur_px = 1.5  # Gaussian blur sigma in pixels (0 disables)
 
-# (#3) Speckle averaging over independent GS designs. EACH SEED IS A FULL SOLVE —
-# runtime scales linearly. Set to 1 for a single quick solve.
-n_seeds = 3
-seed0 = 0  # base RNG seed; designs use seed0, seed0+1, …
+# (#3) ===== SPECKLE AVERAGING — the main quality/cost lever =====================
+# A phase-only CGH always reconstructs the image on top of a grainy speckle
+# background. Averaging the intensities of N *independent* DOE designs (each started
+# from a different random GS phase) suppresses that speckle by ~sqrt(N) — the standard
+# time-multiplexing despeckle. It does NOT change the image structure (the glyphs are
+# identical seed to seed); it only cleans up the background graininess.
+#
+#   *** EACH SEED IS A FULL SOLVE — simulation cost scales linearly with n_seeds. ***
+#
+# Default = 1: a single solve, the fast path. The 2-D reconstruction plot is then one
+# raw speckle realization — the wordmark is fully recognizable, just grainier.
+#
+# To push quality (smoother reconstruction), raise n_seeds:
+#   n_seeds = 2 -> ~1.4x less speckle      n_seeds = 4 -> ~2x      n_seeds = 9 -> ~3x
+# Cost grows in lockstep, so only pay for it when you want the clean averaged image.
+n_seeds = 1
+seed0 = 0  # base RNG seed; designs use seed0, seed0+1, … All seeds are statistically
+#            equivalent independent draws — none is "better"; seed0 just picks which
+#            speckle realization is the one solved and saved.
 
 gs_iterations = 60  # Gerchberg–Saxton iterations per design (engine-free, fast)
 
@@ -168,34 +196,41 @@ print(f"Domain {sim_size} μm = {nx}x{ny}x{nz} voxels ({nx * ny * nz / 1e6:.1f} 
 print(f"DOE: aperture {aperture} μm, n={n_doe}, relief 0…{max_height:.3f} μm "
       f"(~{max_height / pixel_size:.0f} voxels, full 2π)")
 print(f"Reconstruction at x ≈ {x_image:.1f} μm ({z_rec} μm past the DOE exit)")
-print(f"Speckle averaging over {n_seeds} independent design(s) → {n_seeds} full solve(s)")
+if n_seeds == 1:
+    print("Speckle averaging OFF (n_seeds=1): 1 full solve, single raw realization. "
+          "Raise n_seeds for a smoother averaged plot (~sqrt(N) less speckle).")
+else:
+    print(f"Speckle averaging over {n_seeds} independent design(s) -> {n_seeds} full "
+          f"solve(s), ~{n_seeds ** 0.5:.1f}x less speckle vs a single solve.")
 
 
 # --- Target image -------------------------------------------------------------
-def render_target(text, n_pix):
+def render_target(text, n_pix, fontsize=target_fontsize):
     """Rasterize ``text`` into an (n_pix, n_pix) float mask in [0, 1] (glyphs = 1).
 
-    Rendered on an explicit Agg canvas so it works regardless of the interactive
-    backend; falls back to a simple geometric icon if font rendering is unavailable.
-    Swap this out to load your own logo (e.g. a downsampled PNG via plt.imread) instead.
+    Drawn on a 600 px canvas in a bold proportional sans, then resampled to the image grid.
+    ``fontsize`` sets how much of the canvas the text fills: raise it until the widest line
+    nearly fills the canvas, lower it for more margin. Rendered on an explicit Agg canvas so
+    it works regardless of the interactive backend; falls back to a simple icon if font
+    rendering is unavailable. Swap this out to load your own logo instead.
     """
     try:
         from matplotlib.figure import Figure
         from matplotlib.backends.backend_agg import FigureCanvasAgg
 
-        render_px = 256
-        fig = Figure(figsize=(1, 1), dpi=render_px)
+        render_px = 600  # render-canvas resolution in px (square)
+        fig = Figure(figsize=(render_px / 256, render_px / 256), dpi=256)
         canvas = FigureCanvasAgg(fig)
         ax = fig.add_axes([0, 0, 1, 1])
         ax.set_axis_off()
         ax.set_xlim(0, 1)
         ax.set_ylim(0, 1)
-        ax.text(0.5, 0.5, text, ha="center", va="center", fontsize=58,
-                fontweight="bold", family="monospace", linespacing=0.9)
+        ax.text(0.5, 0.5, text, ha="center", va="center", fontsize=fontsize,
+                fontweight="bold", family="sans-serif", linespacing=0.85)
         canvas.draw()
         gray = np.asarray(canvas.buffer_rgba())[..., :3].mean(-1)
         mask = (gray < 128).astype(np.float64)  # dark glyphs on white -> 1
-        # Nearest-neighbour resample the 256² render onto the n_pix image grid.
+        # Nearest-neighbour resample the render onto the n_pix image grid.
         idx = np.linspace(0, mask.shape[0] - 1, n_pix).astype(int)
         return mask[np.ix_(idx, idx)]
     except Exception as exc:  # pragma: no cover - font/back-end fallback
@@ -230,6 +265,8 @@ def build_target():
         tgt = gaussian_filter(tgt, sigma=target_blur_px)  # (#2) low-pass the edges
     if tgt.max() > 0:
         tgt /= tgt.max()
+    if target_rotate_k:  # rotate the whole image in the (y, z) plane; the DOE is designed
+        tgt = np.rot90(tgt, target_rotate_k)  # from this, so every reconstruction follows
     return tgt
 
 
@@ -402,13 +439,15 @@ print(f"Saved seed-averaged |field| volume ({vol_avg.shape}) + seed-0 index & ph
 
 
 # --- Metrics ------------------------------------------------------------------
+# Label adapts: a single solve is a raw realization, >1 is a speckle-averaged image.
+avg_label = "single solve" if n_seeds == 1 else f"avg of {n_seeds}"
 corr_thin = correlation(rec_thin, target)
 corr_full = correlation(rec_full, target)
 in_t = target > 0.5
 contrast_full = float(rec_full[in_t].mean() / (rec_full[~in_t].mean() + 1e-12))
 print(f"\nReconstruction plane: measured x = {x_image_meas:.1f} μm (design {x_image:.1f} μm)")
 print(f"Image correlation with target — thin-screen {corr_thin:.3f}, "
-      f"full-wave (avg of {n_seeds}) {corr_full:.3f}")
+      f"full-wave ({avg_label}) {corr_full:.3f}")
 print(f"Full-wave image contrast (in-image / background intensity) = {contrast_full:.0f}×")
 
 
@@ -420,7 +459,7 @@ axes[0].imshow(target.T, cmap="gray_r", extent=extent_t, aspect="equal")
 axes[0].set_title("Target image")
 
 im1 = axes[1].imshow(rec_full.T, cmap="inferno", extent=extent_t, aspect="equal")
-axes[1].set_title(f"Full-wave reconstruction (avg of {n_seeds})\n"
+axes[1].set_title(f"Full-wave reconstruction ({avg_label})\n"
                   f"x = {x_image_meas:.1f} μm, corr {corr_full:.2f}, "
                   f"contrast {contrast_full:.0f}×")
 fig.colorbar(im1, ax=axes[1], fraction=0.046, pad=0.04).ax.set_title(r"$|E|^2$")
