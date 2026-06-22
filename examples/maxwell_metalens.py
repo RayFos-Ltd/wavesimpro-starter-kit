@@ -65,11 +65,12 @@ Outputs (saved in the git-ignored output/ folder)
   * output/metalens_focal_cone.png   — X–Y cut (z = centre): the plane wave hits
     the flat relief and converges into a focal cone in air;
   * output/metalens_airy_spot.png    — transverse |E|² at the focal plane (the
-    Airy spot) plus a 1-D cut with the measured FWHM vs the diffraction limit;
-  * output/metalens_volume.npy       — downsampled |E| volume for 3-D GUI
-    rendering, plus output/metalens_index.npy (downsampled index map).
+    Airy spot) plus a 1-D cut with the measured FWHM vs the diffraction limit.
 
-Reuses ``wsutils.OUTPUT_DIR``; the substrate + blazed relief are built with NumPy.
+Both figures are cross-sections, so by default the run uses two monitors (an axial
+X–Y slab and a transverse Y–Z slab at the focus) and the cloud returns only those
+planes; set ``USE_MONITOR = False`` to fetch the full volume instead (identical
+figures). Reuses ``wsutils.OUTPUT_DIR``; the substrate + blazed relief are NumPy.
 """
 
 import os
@@ -82,9 +83,9 @@ from matplotlib import colors
 from scipy.signal.windows import tukey
 
 from wsutils import OUTPUT_DIR
-from wavesimpro import simulate
+from wavesimpro import simulate, create_monitor
 
-# Figures / volumes land in the git-ignored output/ folder (created on demand).
+# Figures land in the git-ignored output/ folder (created on demand).
 os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # --- Parameters ---------------------------------------------------------------
@@ -131,7 +132,6 @@ nx, ny, nz = (int(v) for v in n_size)
 cy = cz = transverse / 2  # optical axis (Y, Z centre), μm
 
 taper = 0.3  # Tukey taper fraction for the plane wave in Y, Z (zeros the edges)
-vol_downsample = 2  # downsample factor for the saved 3-D volume
 
 print(f"Domain {sim_size} μm = {nx}x{ny}x{nz} voxels ({nx * ny * nz / 1e6:.1f} Mvoxel)")
 print(f"Metalens: aperture {aperture} μm, f = {focal_length} μm, NA = {NA:.2f}")
@@ -186,6 +186,32 @@ sheet = (src_y[:, None] * src_z[None, :])  # (ny, nz)
 source_values = sheet[None, None, :, :].astype(np.complex64)  # (1, 1, ny, nz)
 source_position = (1, int(x_src / pixel_size), 0, 0)  # (polarization=y, x, y, z) in pixels
 
+iy_c, iz_c = ny // 2, nz // 2  # optical axis (Y, Z centre) in voxels
+
+
+# --- Monitors (recommended): the two cross-sections the figures use -----------
+# Both figures are cross-sections, so two thin monitor slabs capture everything the
+# cloud needs to return — identical figures, a fraction of the data. Set
+# USE_MONITOR = False to fetch the full volume instead. A voxel index i on an
+# n-voxel axis sits at (i + 0.5 - n/2)*px in domain-centred world coordinates.
+#   * "axial": X–Y slab at z = cz (full x, y; thin z) -> focal cone + on-axis focus
+#   * "focal": Y–Z slab at the design focus (full y, z; thin x) -> Airy spot. The
+#     depth of focus (~lambda/(2 NA^2)) dwarfs any finite-aperture focal shift, so
+#     the focus lands inside this band and the argmax below picks its peak plane.
+USE_MONITOR = True
+if USE_MONITOR:
+    z_world = (iz_c + 0.5 - nz / 2) * pixel_size
+    ix_focus_design = int(round(x_focus / pixel_size))
+    x_world = (ix_focus_design + 0.5 - nx / 2) * pixel_size
+    monitor_list = [
+        create_monitor(name="axial", center_x=0.0, center_y=0.0, center_z=z_world,
+                       size_x=nx * pixel_size, size_y=ny * pixel_size, size_z=3 * pixel_size),
+        create_monitor(name="focal", center_x=x_world, center_y=0.0, center_z=0.0,
+                       size_x=10 * pixel_size, size_y=ny * pixel_size, size_z=nz * pixel_size),
+    ]
+else:
+    monitor_list = None
+
 
 # --- Solve --------------------------------------------------------------------
 print("\nRunning simulation...")
@@ -198,12 +224,9 @@ u, iterations, residual_norm = simulate(
     boundary_width=1.5,  # absorbing boundary width, μm (open on all six faces)
     periodic=(False, False, False),
     use_gpu=True,
+    monitors=monitor_list,
 )
 print(f"Time {time() - start:.1f} s; Iterations {iterations}; Residual {residual_norm:.2e}")
-
-u = np.asarray(u)  # vector field (3, nx, ny, nz), host NumPy
-intensity = (np.abs(u) ** 2).sum(axis=0)  # |E|² = |Ex|²+|Ey|²+|Ez|², shape (nx, ny, nz)
-amp = np.sqrt(intensity)
 
 
 # --- Restore SIGINT before plotting (cloud client can leave it wedged) --------
@@ -213,25 +236,36 @@ except (ValueError, TypeError):
     pass
 
 
-# --- Save downsampled volume + index map for 3-D GUI rendering ----------------
-ds = vol_downsample
-np.save(f"{OUTPUT_DIR}/metalens_volume.npy", amp[::ds, ::ds, ::ds].astype(np.float32))
-np.save(f"{OUTPUT_DIR}/metalens_index.npy",
-        np.sqrt(permittivity.real)[::ds, ::ds, ::ds].astype(np.float32))
-print(f"Saved downsampled |E| + index volumes ({amp[::ds, ::ds, ::ds].shape}) to {OUTPUT_DIR}/")
-
-
-# --- Locate the actual focus --------------------------------------------------
-iy_c, iz_c = ny // 2, nz // 2
-axis_band = intensity[:, iy_c - 1:iy_c + 2, iz_c - 1:iz_c + 2].mean(axis=(1, 2))
+# --- Reduce to the cross-sections the figures need ----------------------------
+# Either index the two monitor fields, or slice the equivalent planes from the full
+# volume. Both paths produce the same arrays: the axial amplitude plane `sl`, the
+# on-axis intensity vs x `axis_band`, and the transverse focal-plane intensity.
 ix_air0 = int((x_relief1 + 0.5) / pixel_size)  # search only in the air focal region
+if USE_MONITOR:
+    int_axial = (np.abs(u[0]) ** 2).sum(axis=0)   # (nx, ny, mz) from the "axial" slab
+    jz = int_axial.shape[2] // 2                   # mid of the z-slab = optical axis
+    sl = np.sqrt(int_axial[:, :, jz])              # (nx, ny) amplitude, == amp[:, :, iz_c]
+    axis_band = int_axial[:, iy_c - 1:iy_c + 2, jz - 1:jz + 2].mean(axis=(1, 2))
+    int_focal = (np.abs(u[1]) ** 2).sum(axis=0)    # (mx, ny, nz) from the "focal" slab
+    jf = int(np.argmax(int_focal[:, iy_c, iz_c]))  # peak on-axis plane within the slab
+    focal_plane = int_focal[jf, :, :]              # (ny, nz)
+else:
+    u = np.asarray(u)  # vector field (3, nx, ny, nz), host NumPy
+    intensity = (np.abs(u) ** 2).sum(axis=0)  # |E|² = |Ex|²+|Ey|²+|Ez|², (nx, ny, nz)
+    amp = np.sqrt(intensity)
+    sl = amp[:, :, iz_c]
+    axis_band = intensity[:, iy_c - 1:iy_c + 2, iz_c - 1:iz_c + 2].mean(axis=(1, 2))
+
+
+# --- Locate the actual focus (on-axis intensity in the air region) ------------
 ix_focus = ix_air0 + int(np.argmax(axis_band[ix_air0:]))
 x_focus_meas = ix_focus * pixel_size
+if not USE_MONITOR:
+    focal_plane = intensity[ix_focus, :, :]  # (ny, nz)
 print(f"\nMeasured focus at x = {x_focus_meas:.2f} μm (design {x_focus:.2f} μm)")
 
 
 # --- Figure 1: X–Y focal cone (z = centre) ------------------------------------
-sl = amp[:, :, iz_c]
 vmax = sl.max()
 vmin = vmax * 1e-2  # two decades pops the cone over the substrate standing-wave ripple
 extent = [0, nx * pixel_size, ny * pixel_size, 0]  # x horizontal, y vertical (origin top)
@@ -254,9 +288,8 @@ fig.savefig(f"{OUTPUT_DIR}/metalens_focal_cone.png", dpi=300, bbox_inches="tight
 
 
 # --- Figure 2: transverse Airy spot at the focal plane + FWHM cut -------------
-focal_plane = intensity[ix_focus, :, :]  # |E|² in the focal plane (ny, nz)
 y = np.arange(ny) * pixel_size
-cut = intensity[ix_focus, :, iz_c]  # 1-D cut through the focus along Y
+cut = focal_plane[:, iz_c]  # 1-D cut through the focus along Y
 cut_n = cut / cut.max()
 
 # FWHM of the central lobe by the half-max crossings nearest the peak.
