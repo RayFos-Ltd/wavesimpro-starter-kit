@@ -35,7 +35,7 @@ from time import time
 
 import numpy as np
 
-from wavesimpro import simulate
+from wavesimpro import simulate, create_monitor
 from wsutils import index_canvas, add_waveguide, svmodes, mode_source, OUTPUT_DIR
 
 # --- Parameters (edit these to rescale) --------------------------------------
@@ -116,6 +116,23 @@ source_values, source_position = mode_source(
 z_mid = (kz0 + kz1) // 2
 y = np.arange(ny) * pixel_size
 
+# --- Monitor (recommended): return just the x-y cut-plane this figure plots ---
+# A monitor crops the result to this plane server-side, so only a thin slice is
+# transferred instead of the full volume -- much faster, with identical values on
+# the plotted plane. Keep it on; set USE_MONITOR = False only to fetch the whole
+# 3D volume. The monitor is a thin slab at mid core height; voxel index i on an
+# n-voxel axis sits at (i + 0.5 - n/2)*px in domain-centred world coordinates.
+USE_MONITOR = True
+if USE_MONITOR:
+    z_world = (z_mid + 0.5 - nz / 2) * pixel_size
+    monitor_list = [create_monitor(
+        name="cutplane",
+        center_x=0.0, center_y=0.0, center_z=z_world,
+        size_x=nx * pixel_size, size_y=ny * pixel_size, size_z=3 * pixel_size,
+    )]
+else:
+    monitor_list = None
+
 # --- Run the simulation ------------------------------------------------------
 print("Running simulation...")
 start = time()
@@ -127,12 +144,17 @@ u, iterations, residual_norm = simulate(
     boundary_width=boundary_width,
     periodic=(False, False, False),  # genuine 3D: absorbing on all six faces
     use_gpu=True,
+    monitors=monitor_list
 )
 print(f"Time {time() - start:.1f} s; Iterations {iterations}; Residual {residual_norm:.2e}")
 
-# Visualization cut-plane: top-down slice at mid core height.
+if USE_MONITOR:
+    u = u[0]   # monitor run returns a list of fields; take the only one we defined
+
+# From here on, u is the field volume in both cases. Ey on the mid-core x-y plane;
+# the mid z index is the core centre.
 ey = u[1]
-field_top = ey[:, :, z_mid]
+field_top = ey[:, :, ey.shape[2] // 2]
 
 intensity = np.abs(field_top) ** 2
 x = np.arange(nx) * pixel_size

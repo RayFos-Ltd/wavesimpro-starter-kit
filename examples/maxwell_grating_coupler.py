@@ -37,7 +37,7 @@ from time import time
 
 import numpy as np
 
-from wavesimpro import simulate
+from wavesimpro import simulate, create_monitor
 from wsutils import svmodes, mode_source, OUTPUT_DIR
 
 # --- Parameters (edit these to rescale) --------------------------------------
@@ -131,6 +131,23 @@ source_values, source_position = mode_source(
 
 y_mid = (jy0 + jy1) // 2
 
+# --- Monitor (recommended): return just the x-z cut-plane this figure plots ---
+# A monitor crops the result to this plane server-side, so only a thin slice is
+# transferred instead of the full volume -- much faster, with identical values on
+# the plotted plane. Keep it on; set USE_MONITOR = False only to fetch the whole
+# 3D volume. The monitor is a thin slab through the guide centre; voxel index i on
+# an n-voxel axis sits at (i + 0.5 - n/2)*px in domain-centred world coordinates.
+USE_MONITOR = True
+if USE_MONITOR:
+    y_world = (y_mid + 0.5 - ny / 2) * pixel_size
+    monitor_list = [create_monitor(
+        name="cutplane",
+        center_x=0.0, center_y=y_world, center_z=0.0,
+        size_x=nx * pixel_size, size_y=3 * pixel_size, size_z=nz * pixel_size,
+    )]
+else:
+    monitor_list = None
+
 # --- Run the simulation ------------------------------------------------------
 print("Running simulation...")
 start = time()
@@ -142,12 +159,17 @@ u, iterations, residual_norm = simulate(
     boundary_width=boundary_width,
     periodic=(False, False, False),  # genuine 3D: absorbing on all six faces
     use_gpu=True,
+    monitors=monitor_list,
 )
 print(f"Time {time() - start:.1f} s; Iterations {iterations}; Residual {residual_norm:.2e}")
 
-# Visualization cut-plane: vertical x-z slice through the guide center.
+if USE_MONITOR:
+    u = u[0]   # monitor run returns a list of fields; take the only one
+
+# From here on, u is the field volume in both cases. Visualization cut-plane:
+# vertical x-z slice through the guide centre (the mid y index).
 ey = u[1]
-field_side = ey[:, y_mid, :]
+field_side = ey[:, ey.shape[1] // 2, :]
 
 try:
     signal.signal(signal.SIGINT, signal.default_int_handler)
