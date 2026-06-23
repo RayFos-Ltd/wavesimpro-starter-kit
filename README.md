@@ -10,6 +10,18 @@ thin client that talks to it.
 > - **Register / sign in:** **[studio.rayfos.com](https://studio.rayfos.com/)**
 > - **Product overview:** **[rayfos.com/wavesimpro](https://www.rayfos.com/wavesimpro)**
 
+> ### 👁️ Scripting power, plus the WaveSimPro Cloud Web GUI to see it
+> This kit gives you the best of both: the **freedom and power of scripting** to build and
+> submit simulations from Python (your own code, or the `examples/`), *and* the
+> **interactive WaveSimPro Cloud Web GUI** to explore what comes back. What's easy to miss
+> is that **every simulation you submit — its model and its results — is also waiting for you
+> in the Web GUI at [studio.rayfos.com](https://studio.rayfos.com/)**, where you can browse,
+> visualise, and inspect it interactively. It's by far the easiest way to explore a 3-D field
+> or compare runs — don't rely only on the plots the scripts save locally.
+>
+> *(You can also build and run simulations entirely in the Web GUI, without scripting — but
+> that's outside the scope of this kit.)*
+
 It contains **only** what a user of `wavesimpro` needs to get going:
 
 - **`wsutils/`** — small, *engine-free* helper utilities to build inputs and inspect outputs:
@@ -22,6 +34,30 @@ It contains **only** what a user of `wavesimpro` needs to get going:
 
 These utilities produce plain NumPy arrays and depend only on NumPy/SciPy/Matplotlib — they do
 **not** import the `wavesim` core engine. The only wave-simulation dependency is `wavesimpro`.
+
+## Scientific foundation
+
+WaveSimPro is built on the **modified Born series (MBS)** method for solving the wave equation —
+an approach with no numerical dispersion, lower memory requirements, and faster convergence than
+the finite-difference time-domain (FDTD) methods traditionally used for these problems. The method
+and its open-source reference implementation were developed by **[Ivo Vellekoop](https://github.com/IvoVellekoop)**
+and colleagues at the **University of Twente**, to whom this project owes its scientific foundation.
+
+The two publications behind the method:
+
+> Osnabrugge, G., Leedumrongwatthanakun, S., & Vellekoop, I. M. (2016). *A convergent Born series
+> for solving the inhomogeneous Helmholtz equation in arbitrarily large media.* Journal of
+> Computational Physics, 322, 113–124. <https://doi.org/10.1016/j.jcp.2016.06.034>
+
+> Mache, S., & Vellekoop, I. M. (2025). *Domain decomposition of the modified Born series approach
+> for large-scale wave propagation simulations.* Journal of Computational Physics, 114619.
+> <https://doi.org/10.1016/j.jcp.2025.114619>
+
+The reference open-source Python implementation, **`wavesim_py`**, is available on GitHub at
+**<https://github.com/IvoVellekoop/wavesim_py>** (documentation:
+[wavesim.readthedocs.io](https://wavesim.readthedocs.io/); project site:
+[wavesim.org](https://www.wavesim.org/)). The `wsutils` helpers in this starter kit are adapted
+from it — see [License](#license).
 
 ## Install
 
@@ -79,7 +115,7 @@ on the path, so the example scripts run from anywhere with no `sys.path` jugglin
 The simulations run on the WaveSimPro cloud, so the `wavesimpro` client needs an API key to
 authenticate. Once you've [registered](https://studio.rayfos.com/), get one here:
 
-1. Sign in and open **[studio.rayfos.com/api](https://studio.rayfos.com/api)**.
+1. Sign in and open **[studio.rayfos.com/api-access](https://studio.rayfos.com/api-access)**.
 2. Use a key you already have, or click **Create** to generate a new one, and copy it.
 
 The first time you run a simulation, the `wavesimpro` client detects that it isn't configured yet
@@ -92,6 +128,9 @@ that prompt with the key you just copied — after that, the examples run withou
 python examples/helmholtz_simulate.py
 ```
 
+For a guided tour of all the scripts — application showcases, getting-started
+building blocks, and validation cases — see the **[Examples Catalogue](EXAMPLES.md)**.
+
 ## Layout
 
 ```
@@ -100,6 +139,7 @@ wavesimpro-starter-kit/
 ├── environment.yml   # conda env (conda-forge stack + wavesimpro via pip)
 ├── requirements.txt  # pip-only install path
 ├── README.md
+├── EXAMPLES.md       # catalogue of every example, grouped and described
 ├── wsutils/          # engine-free helper utilities
 │   ├── create_medium.py
 │   ├── create_source.py
@@ -121,3 +161,12 @@ wavesimpro-starter-kit/
 [`wavesim_py`](https://github.com/IvoVellekoop/wavesim_py) project (Ivo Vellekoop, Swapnil Mache —
 University of Twente); the `LICENSE` file retains that original copyright notice alongside
 Rayfos Ltd.
+
+The waveguide mode solver in [`wsutils/svmodes.py`](wsutils/svmodes.py) (the `svmodes`
+finite-difference semi-vectorial eigenmode solver) is vendored from the MIT-licensed
+[`modesolver`](https://github.com/thomas-e-murphy/modesolver) package
+(© 2025 Thomas E. Murphy), which implements the method of A. B. Fallahkhair, K. S. Li and
+T. E. Murphy, *"Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides"*,
+J. Lightwave Technol. **26**(11), 1423–1431 (2008),
+[doi:10.1109/JLT.2008.923643](https://doi.org/10.1109/JLT.2008.923643). Its full copyright and
+permission notice are retained in the `LICENSE` file under *Third-party components*.

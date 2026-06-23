@@ -25,6 +25,8 @@ env/
 CLAUDE.md
 .claude/
 
-# Output artifacts from examples (saved fields)
+# Output artifacts from examples (figures, saved fields)
+# All examples write generated figures here via wsutils.OUTPUT_DIR.
+output/
 *.npy
 *.npz
