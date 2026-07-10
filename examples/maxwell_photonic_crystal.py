@@ -108,7 +108,7 @@ def transmitted_field(permittivity_map, wavelength):
         sources=[(source_values, source_position)],
         wavelength=wavelength,
         pixel_size=pixel_size,
-        boundary_width=1.5,  # Absorbing boundary width in micrometer (μm)
+        boundary_width=6.0,  # Absorbing boundary width, μm (≈4-5λ over the sweep — MBS sizing rule)
         periodic=(False, False, True),  # periodic in z -> infinite rods (2D)
         use_gpu=True,
     )

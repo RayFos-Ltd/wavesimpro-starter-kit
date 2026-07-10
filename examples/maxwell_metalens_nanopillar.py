@@ -125,7 +125,7 @@ def calibrate_library():
         u, iters, res = simulate(
             permittivity=(nmap ** 2).astype(np.complex64),
             sources=[(src, pos)], wavelength=wavelength, pixel_size=pixel_size,
-            boundary_width=1.0, periodic=(False, True, True), use_gpu=True,
+            boundary_width=2.5, periodic=(False, True, True), use_gpu=True,  # ≈5λ (MBS rule)
         )
         u = np.asarray(u)
         ey = u[1]
@@ -219,7 +219,7 @@ u, iterations, residual_norm = simulate(
     sources=[(source_values, source_position)],
     wavelength=wavelength,
     pixel_size=pixel_size,
-    boundary_width=1.5,
+    boundary_width=2.5,  # ≈5λ (MBS sizing rule)
     periodic=(False, False, False),
     use_gpu=True,
 )

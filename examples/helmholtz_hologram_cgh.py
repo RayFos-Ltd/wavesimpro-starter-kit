@@ -379,7 +379,7 @@ for s in range(n_seeds):
         sources=[(source_values, source_position)],
         wavelength=wavelength,
         pixel_size=pixel_size,
-        boundary_width=1.5,  # absorbing boundary width, μm (open on all six faces)
+        boundary_width=2.5,  # absorbing boundary width, μm ≈5λ (MBS sizing rule), open on all six faces
         periodic=(False, False, False),
         use_gpu=True,
     )

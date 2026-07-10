@@ -212,7 +212,7 @@ u, iterations, residual_norm = simulate(
     sources=[(source_values, source_position)],
     wavelength=wavelength,
     pixel_size=pixel_size,
-    boundary_width=2.0,  # absorbing boundary width, μm (open on all six faces)
+    boundary_width=5.0,  # absorbing boundary width, μm =5λ (MBS sizing rule), open on all six faces
     periodic=(False, False, False),
     use_gpu=True,
 )

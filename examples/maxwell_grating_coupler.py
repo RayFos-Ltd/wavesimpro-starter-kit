@@ -71,7 +71,7 @@ n_teeth = 18
 grating_start = 3.0  # x where the grating begins (μm)
 
 x_source = 1.6        # mode launch position (μm), clear of the boundary
-boundary_width = 1.2  # absorbing boundary width (μm), all six faces
+boundary_width = 6.0  # absorbing boundary width (μm) ≈4.0λ (MBS sizing rule), all six faces
 
 sim_x = grating_start + n_teeth * period + 3.0  # lead-in + grating + tail
 
