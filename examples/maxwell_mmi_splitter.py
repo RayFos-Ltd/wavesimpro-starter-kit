@@ -58,7 +58,7 @@ zc = sim_z / 2
 
 x_source = 2.5       # mode launch position (μm), clear of the boundary
 mmi_start = 4.0      # x where the multimode section begins (μm)
-boundary_width = 1.0  # absorbing boundary width (μm), all six faces
+boundary_width = 6.0  # absorbing boundary width (μm) ≈4.0λ (MBS sizing rule), all six faces
 
 ny = int(round(sim_y / pixel_size))
 nz = int(round(sim_z / pixel_size))

@@ -201,7 +201,7 @@ for theta_deg in angles_deg:
         sources=[(source_values, source_position)],
         wavelength=wavelength,
         pixel_size=pixel_size,
-        boundary_width=1.0,  # absorbing boundary width, μm
+        boundary_width=2.5,  # absorbing boundary width, μm (≈5λ — the MBS sizing rule)
         periodic=(False, False, True),  # periodic in z -> 2D (infinite in z)
         use_gpu=True,
     )

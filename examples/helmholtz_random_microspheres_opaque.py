@@ -327,7 +327,7 @@ def main():
         sources=[(source_values, source_position)],
         wavelength=wavelength,
         pixel_size=pixel_size,
-        boundary_width=2.0,
+        boundary_width=5.0,  # =5λ (MBS sizing rule)
         periodic=(False, False, False),
         use_gpu=True,
         full_residuals=True,  # full residual history for the convergence plot

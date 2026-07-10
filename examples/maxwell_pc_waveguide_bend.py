@@ -116,7 +116,7 @@ u, iterations, residual_norm = simulate(
     sources=[(source_values, source_position)],
     wavelength=operating_wavelength,
     pixel_size=pixel_size,
-    boundary_width=1.5,  # Absorbing boundary width in micrometer (μm)
+    boundary_width=5.0,  # Absorbing boundary width, μm ≈4λ (MBS sizing rule)
     periodic=(False, False, True),  # periodic in z -> infinite rods (2D)
     use_gpu=True,
 )

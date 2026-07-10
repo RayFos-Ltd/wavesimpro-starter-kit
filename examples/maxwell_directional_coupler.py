@@ -59,7 +59,7 @@ y_top = yc - sep  # upper guide center (the launch guide)
 y_bot = yc + sep  # lower guide center
 
 x_source = 2.5       # mode launch position (μm), clear of the boundary
-boundary_width = 1.0  # absorbing boundary width (μm), all six faces
+boundary_width = 6.0  # absorbing boundary width (μm) ≈4.0λ (MBS sizing rule), all six faces
 
 ny = int(round(sim_y / pixel_size))
 nz = int(round(sim_z / pixel_size))
