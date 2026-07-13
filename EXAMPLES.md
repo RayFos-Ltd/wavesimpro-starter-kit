@@ -1,5 +1,11 @@
 # WaveSimPro Starter-Kit — Examples Catalogue
+<div align="center">
 
+[![WaveSimPro examples demo](https://img.youtube.com/vi/LcBW98BSRhQ/maxresdefault.jpg)](https://youtu.be/LcBW98BSRhQ)
+
+▶️ Click to watch the demo on YouTube
+
+</div>
 A guided tour of every script in [`examples/`](examples/). All examples call
 `from wavesimpro import simulate` and run on the WaveSimPro cloud (see the
 [README](README.md) for installation and API-key setup).
