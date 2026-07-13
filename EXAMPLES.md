@@ -4,10 +4,12 @@ A guided tour of every script in [`examples/`](examples/). All examples call
 `from wavesimpro import simulate` and run on the WaveSimPro cloud (see the
 [README](README.md) for installation and API-key setup).
 
-Every example is a **single-frequency, continuous-wave** solve — the result is a
-steady-state complex field (amplitude **and** phase), not a time-domain animation.
-Scripts are either **scalar Helmholtz** (one field component) or **vector Maxwell**
-(the full E-field), and run in 2-D or 3-D as noted. The application examples write
+Nearly every example is a **single-frequency, continuous-wave** solve — the result
+is a steady-state complex field (amplitude **and** phase), not a time-domain
+animation. (The one exception, [`helmholtz_pulse2d.py`](examples/helmholtz_pulse2d.py),
+synthesises a time-domain pulse by combining several such CW solves across a
+frequency band.) Scripts are either **scalar Helmholtz** (one field component) or
+**vector Maxwell** (the full E-field), and run in 2-D or 3-D as noted. The application examples write
 their figures and volumes to a git-ignored `output/` folder.
 
 The examples fall into three groups:
@@ -36,6 +38,7 @@ utilities in `wsutils` (sources and media). Good first reads.
 | [`maxwell_2d_create_medium.py`](examples/maxwell_2d_create_medium.py) | Maxwell 2-D | Building a 2-D medium of material blocks and solving Maxwell's equations. |
 | [`helmholtz_3d_advanced.py`](examples/helmholtz_3d_advanced.py) | Helmholtz 3-D | Advanced usage: **multiple sources** in a 3-D block medium, plus a progress **callback**. |
 | [`helmholtz_3d_import_lens.py`](examples/helmholtz_3d_import_lens.py) | Helmholtz 3-D | Loading a refractive-index map from a `.mat` file and propagating a Gaussian beam through the lens. |
+| [`helmholtz_pulse2d.py`](examples/helmholtz_pulse2d.py) | Helmholtz 2-D | Time-domain **pulse propagation** built from a frequency sweep: several CW plane-wave solves across a Gaussian-windowed spectrum are stacked and inverse-Fourier-transformed to animate a band-limited pulse crossing a homogeneous 2-D medium (a saved `.gif`). |
 
 ---
 

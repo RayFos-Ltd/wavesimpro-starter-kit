@@ -60,10 +60,10 @@ field slice.
 Cost note: Part 1 cells are tiny (60x60x300 voxels). Part 2 is the heavyweight
 showcase: at the 5x5 default, a 300x300x300 stated domain and ~380 Mvoxel
 including the absorbing boundaries the solver adds outside it. Typical cost:
-~380 s per solve and ~30 GB of GPU memory. For scale: the same physical
-domain at the reference paper's 2 nm FDTD mesh is ~380 GVOXEL (~10+ TB even at
-FDTD's leaner bytes-per-voxel) — a cluster-scale problem solved here converged
-on one GPU in six minutes. Monitors return only the photodiode Si block
+~380 s per solve and ~30 GB of GPU memory. For scale: the 6 μm pixel-array
+domain alone at the 4 nm mesh the reference paper used for its pixel FDTD is
+~3.4 GVOXEL (125x), and ~27 GVOXEL at the 2 nm of its unit-cell study — here
+it runs on one GPU in six minutes. Monitors return only the photodiode Si block
 (~330 MB at 5x5) and a thin viz slice, not the full volume. Set N_PIX_XTALK = 3
 for the lighter variant or RUN_CROSSTALK = False to run Part 1 alone.
 
@@ -89,7 +89,8 @@ os.makedirs(OUTPUT_DIR, exist_ok=True)
 # Parameters
 # =============================================================================
 wavelength = 0.850    # μm — the paper's headline NIR wavelength
-pixel_size = 0.020    # μm — λ/8 in Si at 850 nm; a 10 nm convergence check is identical
+pixel_size = 0.020    # μm — λ/12 in Si at 850 nm (MBS needs only λ/4–λ/8);
+                      # a 10 nm convergence check is identical
 boundary_um = 4.25    # absorbing boundary = 5λ (MBS sizing rule) — sufficient at 850 nm
                       # because the Si itself damps the diffracted orders before they
                       # reach the bottom absorber
