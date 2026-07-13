@@ -3,10 +3,10 @@ Maxwell 3D inverted-pyramid light trapping — NIR absorption in a CMOS pixel su
 ====================================================================================
 Reproduces the unit-cell FDTD study of Yokogawa et al., "IR sensitivity enhancement
 of CMOS Image Sensor with diffractive light trapping pixels", Sci. Rep. 7:3832 (2017),
-DOI 10.1038/s41598-017-04200-y — the paper behind Sony's IR-enhanced image sensors.
+DOI 10.1038/s41598-017-04200-y — a CMOS image sensor with enhanced IR sensitivity.
 
 A crystalline-Si photodiode is nearly transparent at NIR wavelengths (at λ = 850 nm
-the absorption depth is ~19 μm, so a 3 μm photodiode catches only ~12%). Sony's fix:
+the absorption depth is ~19 μm, so a 3 μm photodiode catches only ~12%). The paper's fix:
 etch a dense array of inverted pyramids (IPA) into the Si surface — the (111) facets
 at 54.7° diffract the incoming light into steep angles inside the Si, elongating the
 optical path and trapping light by total internal reflection. That is pure wavelength-

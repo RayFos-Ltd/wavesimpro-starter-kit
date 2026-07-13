@@ -2,7 +2,7 @@
 Maxwell 3D BI-CIS pixel — IPA light trapping + DTI crosstalk suppression
 ========================================================================
 The full back-illuminated pixel of Yokogawa et al. (Sci. Rep. 7:3832, 2017 —
-Sony's IR-enhanced CMOS image sensor): the complete stack of the paper's
+an IR-enhanced CMOS image sensor): the complete stack of the paper's
 Figs. 3/4/7. Companion to ``maxwell_ipa_light_trapping.py``, which solves the
 bare surface unit cell (paper Fig. 2).
 
