@@ -10,6 +10,7 @@ fields are stacked along a frequency axis and an inverse FFT recovers the field 
 function of time, which is then animated.
 """
 
+import os
 import numpy as np
 from time import time, localtime, strftime
 import matplotlib.pyplot as plt
@@ -17,7 +18,9 @@ import matplotlib.animation as animation
 from scipy.signal.windows import gaussian
 
 from wavesimpro import simulate
-#import examples  # noqa: F401  (fixes cwd to repo root and creates the logs/ directory)
+from wsutils import OUTPUT_DIR
+
+os.makedirs(OUTPUT_DIR, exist_ok=True)
 
 # Parameters
 PPW = 4                       # points per wavelength
@@ -109,9 +112,9 @@ def update(frame):
 anim = animation.FuncAnimation(fig, update, frames=n_frames, interval=100, blit=False)
 plt.tight_layout()
 
-# Save the animation as a gif in logs/.
+# Save the animation as a gif in the output/ folder.
 date_time = strftime("%Y%m%d_%H%M%S", localtime())
-gif_path = f"output/pulse2d_{date_time}.gif"
+gif_path = f"{OUTPUT_DIR}/pulse2d_{date_time}.gif"
 try:
     anim.save(gif_path, writer=animation.PillowWriter(fps=10))
     print(f"Saved animation to {gif_path}")
