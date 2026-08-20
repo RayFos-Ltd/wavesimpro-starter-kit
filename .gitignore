@@ -25,6 +25,9 @@ env/
 CLAUDE.md
 .claude/
 
+# Local media tooling (not part of the published kit)
+media/
+
 # Output artifacts from examples (figures, saved fields)
 # All examples write generated figures here via wsutils.OUTPUT_DIR.
 output/
