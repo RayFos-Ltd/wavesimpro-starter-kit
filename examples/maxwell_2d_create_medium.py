@@ -36,7 +36,6 @@ source_values, source_position = gaussian_beam(
     position=[2, 0, 0, 0],  # source top left position in (x, y, z) in micrometer (μm)
     source_plane="x",
     pixel_size=pixel_size,
-    alpha=3,  # width factor for Gaussian window
 )
 
 # Run the wavesim iteration and get the computed field
@@ -47,7 +46,7 @@ u, iterations, residual_norm = simulate(
     sources=[(source_values, source_position)],
     wavelength=wavelength,
     pixel_size=pixel_size,
-    boundary_width=10,  # Boundary width in micrometer (μm)
+    boundary_width=4,  # Boundary width in micrometer (μm)
     periodic=(False, False, True),  # Periodic boundary conditions in the z direction
 )
 sim_time = time() - start

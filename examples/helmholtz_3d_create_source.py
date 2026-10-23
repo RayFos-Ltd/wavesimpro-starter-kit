@@ -63,7 +63,6 @@ source_values, source_position = create_source.gaussian_beam(
     theta=np.pi / 4,  # angle of incidence of the source with respect to the source axis in radians
     phi=np.pi / 6,  # angle of incidence of the source in the plane orthogonal to the source axis in radians
     wavelength=wavelength,  # wavelength must be defined for angled source, i.e. when theta or phi is not None
-    alpha=3,  # width factor for Gaussian window
 )
 
 # Run the wavesim iteration and get the computed field

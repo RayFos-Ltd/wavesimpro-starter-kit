@@ -38,7 +38,6 @@ source_values, source_position = gaussian_beam(
     pixel_size=pixel_size,
     theta=np.pi / 4, 
     wavelength=wavelength,  # wavelength must be defined for angled source, i.e. when theta or phi is not None
-    alpha=3, 
 )
 
 # Run the wavesim iteration and get the computed field

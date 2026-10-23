@@ -26,7 +26,7 @@ It contains **only** what a user of `wavesimpro` needs to get going:
 
 - **`wsutils/`** — small, *engine-free* helper utilities to build inputs and inspect outputs:
   - `create_medium` — `random_permittivity`, `cuboids_permittivity`, `sphere_permittivity`
-  - `create_source` — `point_source`, `plane_wave`, `gaussian_beam`
+  - `create_source` — `point_source`, `plane_wave`, `gaussian_beam`, `apodise`, `make_directional`
   - `plotting` — `plot_computed`, `plot_computed_and_reference`
   - `utilities` — `relative_error`, `all_close`, `analytical_solution`, `normalize`, …
 - **`examples/`** — runnable scripts that solve the Helmholtz equation and Maxwell's equations
@@ -128,8 +128,10 @@ that prompt with the key you just copied — after that, the examples run withou
 python examples/helmholtz_simulate.py
 ```
 
-For a guided tour of all the scripts — application showcases, getting-started
-building blocks, and validation cases — see the **[Examples Catalogue](EXAMPLES.md)**.
+For a guided tour of all the scripts — getting-started building blocks and validation
+cases — see the **[Examples Catalogue](EXAMPLES.md)**. Realistic devices (metalenses,
+photonic crystals, holograms, image sensors, integrated photonics) are in the companion
+notebook repository [`wavesimpro-examples`](https://github.com/RayFos-Ltd/wavesimpro-examples).
 
 ## Layout
 
@@ -157,16 +159,9 @@ wavesimpro-starter-kit/
 
 ## License
 
-[MIT](LICENSE). The `wsutils` helpers are adapted from the MIT-licensed
+[LGPL-2.1](LICENSE). You may use `wsutils` and these examples from your own code, open or
+proprietary, without obligation; a modified copy of `wsutils` that you redistribute must be
+published under the same license. The `wsutils` helpers are adapted from the MIT-licensed
 [`wavesim_py`](https://github.com/IvoVellekoop/wavesim_py) project (Ivo Vellekoop, Swapnil Mache —
-University of Twente); the `LICENSE` file retains that original copyright notice alongside
-Rayfos Ltd.
-
-The waveguide mode solver in [`wsutils/svmodes.py`](wsutils/svmodes.py) (the `svmodes`
-finite-difference semi-vectorial eigenmode solver) is vendored from the MIT-licensed
-[`modesolver`](https://github.com/thomas-e-murphy/modesolver) package
-(© 2025 Thomas E. Murphy), which implements the method of A. B. Fallahkhair, K. S. Li and
-T. E. Murphy, *"Vector Finite Difference Modesolver for Anisotropic Dielectric Waveguides"*,
-J. Lightwave Technol. **26**(11), 1423–1431 (2008),
-[doi:10.1109/JLT.2008.923643](https://doi.org/10.1109/JLT.2008.923643). Its full copyright and
-permission notice are retained in the `LICENSE` file under *Third-party components*.
+University of Twente); the `LICENSE` file retains that notice. Running simulations requires a
+WaveSimPro account; use of the service is subject to its own terms.

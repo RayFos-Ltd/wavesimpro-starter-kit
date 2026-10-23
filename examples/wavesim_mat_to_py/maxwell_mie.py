@@ -8,11 +8,10 @@ Compare with reference solution (matlab repo result).
 import numpy as np
 from time import time
 from scipy.io import loadmat
-from scipy.signal.windows import tukey
 
 from wavesimpro import simulate
 from wsutils.create_medium import sphere_permittivity
-from wsutils import relative_error, plot_computed_and_reference
+from wsutils import relative_error, plot_computed_and_reference, apodise
 
 # Parameters
 wavelength = 1.0  # Wavelength in micrometer (μm)
@@ -34,10 +33,11 @@ prefactor = 2 * k / (1.0j * pixel_size)
 
 # Linearly-polarized apodized plane wave
 # (filter edges to reduce diffraction and the source extends into the absorbing boundaries)
-src0 = tukey(n_size[0], 0.5).reshape((1, -1, 1, 1))
-src1 = tukey(n_size[1], 0.5).reshape((1, 1, -1, 1))
-source_values = (prefactor * np.exp(1.0j * k * z_r[0, 0, 0]) * src0 * src1).astype(np.complex64)
+source_values = np.full((1, n_size[0], n_size[1], 1),
+                        prefactor * np.exp(1.0j * k * z_r[0, 0, 0]), dtype=np.complex128)
 source_position = [1, 0, 0, 0]  # 1 for y-polarization
+source_values, source_position = apodise((source_values, source_position),
+                                         axes="xy", alpha=0.5)
 
 # Run the wavesim iteration and get the computed field
 start = time()

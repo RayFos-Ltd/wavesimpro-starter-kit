@@ -10,22 +10,18 @@ A guided tour of every script in [`examples/`](examples/). All examples call
 `from wavesimpro import simulate` and run on the WaveSimPro cloud (see the
 [README](README.md) for installation and API-key setup).
 
-Nearly every example is a **single-frequency, continuous-wave** solve — the result
-is a steady-state complex field (amplitude **and** phase), not a time-domain
-animation. (The one exception, [`helmholtz_pulse2d.py`](examples/helmholtz_pulse2d.py),
-synthesises a time-domain pulse by combining several such CW solves across a
-frequency band.) Scripts are either **scalar Helmholtz** (one field component) or
-**vector Maxwell** (the full E-field), and run in 2-D or 3-D as noted. The application examples write
-their figures and volumes to a git-ignored `output/` folder.
+Every example is a **single-frequency, continuous-wave** solve — the result is a
+steady-state complex field (amplitude **and** phase), not a time-domain animation.
+Scripts are either **scalar Helmholtz** (one field component) or **vector Maxwell** (the
+full E-field), and run in 2-D or 3-D as noted. Figures go to a git-ignored `output/` folder.
 
-The examples fall into three groups:
+The examples fall into two groups, with a pointer to the advanced ones:
 
 1. [Getting started & building blocks](#1-getting-started--building-blocks) — short
-   scripts that show how to call `simulate` and how to build sources and media.
+   scripts that show how to call `simulate` and how to build sources, media and monitors.
 2. [Accuracy & validation](#2-accuracy--validation) — solves checked against analytic
    theory and saved reference fields.
-3. [Application showcases](#3-application-showcases) — realistic, wavelength-scale
-   structures where the wave nature of light is essential.
+3. [Advanced examples](#3-advanced-examples) — realistic devices, in a companion repository.
 
 ---
 
@@ -44,7 +40,8 @@ utilities in `wsutils` (sources and media). Good first reads.
 | [`maxwell_2d_create_medium.py`](examples/maxwell_2d_create_medium.py) | Maxwell 2-D | Building a 2-D medium of material blocks and solving Maxwell's equations. |
 | [`helmholtz_3d_advanced.py`](examples/helmholtz_3d_advanced.py) | Helmholtz 3-D | Advanced usage: **multiple sources** in a 3-D block medium, plus a progress **callback**. |
 | [`helmholtz_3d_import_lens.py`](examples/helmholtz_3d_import_lens.py) | Helmholtz 3-D | Loading a refractive-index map from a `.mat` file and propagating a Gaussian beam through the lens. |
-| [`helmholtz_pulse2d.py`](examples/helmholtz_pulse2d.py) | Helmholtz 2-D | Time-domain **pulse propagation** built from a frequency sweep: several CW plane-wave solves across a Gaussian-windowed spectrum are stacked and inverse-Fourier-transformed to animate a band-limited pulse crossing a homogeneous 2-D medium (a saved `.gif`). |
+| [`hello_monitors.py`](examples/hello_monitors.py) | Maxwell 3-D | **Monitors**: ask `simulate` for two regions of the field (a plane and a small cube) instead of the whole volume, and read them back from the list it returns. |
+| [`maxwell_waveguide_basic.py`](examples/maxwell_waveguide_basic.py) | Maxwell 2-D | A first **waveguide**: a Gaussian beam launched into a dielectric strip stays guided along it. The companion repository takes this on to couplers and GDSII devices. |
 
 ---
 
@@ -68,26 +65,11 @@ MATLAB `wavesim` repository) using `relative_error`. The scripts in
 
 ---
 
-## 3. Application showcases
+## 3. Advanced examples
 
-These solve structures whose features are comparable to the wavelength, so geometric
-ray tracing does not apply and the result depends on diffraction, interference and
-near-field coupling. Each returns the steady-state field directly.
-
-| Example | Solves | What it demonstrates |
-|---------|--------|----------------------|
-| [`maxwell_metalens.py`](examples/maxwell_metalens.py) | Maxwell 3-D | A flat, wavelength-thin lens (a blazed surface-relief kinoform) focuses a plane wave to a diffraction-limited Airy spot. Shows the focal cone and reports spot size and NA. |
-| [`maxwell_metalens_nanopillar.py`](examples/maxwell_metalens_nanopillar.py) | Maxwell 3-D | The same flat lens built as a true sub-wavelength **nanopillar metasurface**, with the pillar-diameter→phase library calibrated from periodic unit-cell solves — the way real metasurfaces are designed. |
-| [`maxwell_metalens_2d.py`](examples/maxwell_metalens_2d.py) | Maxwell 2-D | A fast 2-D cross-section of the flat lens — the quickest way to see a metalens focus (runs in seconds). |
-| [`maxwell_microlens.py`](examples/maxwell_microlens.py) | Maxwell 2-D | A CMOS/CCD sensor microlens only a few wavelengths across: diffraction-limited focus, the pixel's angular response over a chief-ray-angle sweep, and optical crosstalk into neighbouring pixels. |
-| [`helmholtz_bessel_vortex.py`](examples/helmholtz_bessel_vortex.py) | Helmholtz | A Bessel beam propagated over ~100 wavelengths: a non-diffracting core (next to a Gaussian that spreads), self-healing past an opaque obstacle, and an optical vortex (doughnut intensity + helical phase). |
-| [`helmholtz_random_microspheres.py`](examples/helmholtz_random_microspheres.py) | Helmholtz | A plane wave through a slab of randomly packed microspheres develops fully three-dimensional **volumetric speckle** from multiple coherent scattering. |
-| [`helmholtz_random_microspheres_opaque.py`](examples/helmholtz_random_microspheres_opaque.py) | Helmholtz | The strong, **opaque/diffusive** regime of the above (high-index, thick, densely packed): far-field speckle contrast and grain size, plus a convergence plot. A large cloud-scale run. |
-| [`maxwell_photonic_crystal.py`](examples/maxwell_photonic_crystal.py) | Maxwell 2-D | A finite photonic crystal (square lattice of dielectric rods), wavelength-swept to reveal the **photonic bandgap** — a band of colours the crystal cannot transmit. Reports true transmittance. |
-| [`maxwell_pc_waveguide_bend.py`](examples/maxwell_pc_waveguide_bend.py) | Maxwell 2-D | A line-defect waveguide carved into the same crystal guides light around a sharp **90° bend** with near-total transmission — confinement by the bandgap, which a conventional waveguide cannot match. |
-| [`helmholtz_hologram_cgh.py`](examples/helmholtz_hologram_cgh.py) | Helmholtz | A flat diffractive phase plate (kinoform), designed by Gerchberg–Saxton, reconstructs a recognizable image in mid-air purely by diffraction. Compares the rigorous full-wave reconstruction against the thin-screen Fourier-optics prediction. |
-| [`maxwell_grating_coupler.py`](examples/maxwell_grating_coupler.py) | Maxwell 3-D | The canonical fiber-to-chip **grating coupler** as a full 3-D structure: a finite-width, partially-etched silicon waveguide grating (220 nm Si on buried oxide, air top-cladding) diffracts the guided mode up out of the chip into a free-space beam for an optical fiber. Launched with the true (y, z) waveguide mode from the svmodes solver. |
-| [`maxwell_mmi_splitter.py`](examples/maxwell_mmi_splitter.py) | Maxwell 3-D | A 1×2 **multimode-interference (MMI) splitter** as a full 3-D SOI device: a wide multimode section self-images the 220 nm-core input mode into a 50/50 split. The two-image length is designed by modal expansion of the real (y, z) cross-section modes (svmodes) and validated by the full-wave run. |
-| [`maxwell_directional_coupler.py`](examples/maxwell_directional_coupler.py) | Maxwell 3-D | A **directional coupler** as a full 3-D SOI device: power sloshes between two side-by-side 450×220 nm silicon waveguides via evanescent supermode beating. The coupling length `L_c` from the svmodes supermodes sets the device length; the full-wave run shows full power crossover at `L_c` and return at `2 L_c`. |
-| [`maxwell_ipa_light_trapping.py`](examples/maxwell_ipa_light_trapping.py) | Maxwell 3-D | **Inverted-pyramid light trapping** in a CMOS image-sensor surface (Yokogawa et al., *Sci. Rep.* 7:3832 — an IR-enhanced CMOS image sensor): one periodic unit cell of 54.7°-facet pyramids etched into absorbing c-Si boosts NIR absorption ~1.3–1.5× by diffracting light into steep trapped orders. Default run reproduces the paper's three stated 850 nm anchor values (and the flat case matches the analytic Fresnel answer to 0.1%); a commented one-line swap sweeps pitch × wavelength to reproduce the paper's full Fig. 2c enhancement curves. |
-| [`maxwell_ipa_pixel.py`](examples/maxwell_ipa_pixel.py) | Maxwell 3-D | The **full back-illuminated sensor pixel** from the same paper (microlens + inverted-pyramid surface + deep-trench isolation, 1.2 μm pixels), solved as one 3-D Maxwell problem: Part 1 compares the NIR absorption of flat / IPA / IPA+DTI photodiodes on a periodic array; Part 2 lights ONLY the centre pixel of a 5×5 array and maps the per-pixel signal — the diffractive origin of pixel crosstalk and its suppression by the trenches, the mechanism behind the paper's sharp-vs-blurred NIR images. The heavyweight showcase: ~380 Mvoxel with boundaries, minutes on one GPU. |
+Realistic, wavelength-scale devices — flat and nanopillar metalenses, a CMOS microlens,
+photonic crystals and a bandgap waveguide bend, a computer-generated hologram, Bessel and
+vortex beams, random-microsphere scattering, image-sensor light trapping, and integrated
+photonics (grating coupler, MMI, directional coupler, GDSII-imported devices) — live in the
+companion repository **[`wavesimpro-examples`](https://github.com/RayFos-Ltd/wavesimpro-examples)**
+as notebooks. They use the same `wsutils` helpers as this kit.

@@ -30,7 +30,6 @@ source_values, source_position = gaussian_beam(
     position=[0, 0, 0],  # source top left position in (x, y, z) in micrometer (μm)
     source_plane="yz",  # The string is always sorted by alphabetical order, so 'yz' and 'zy' are both recognized as 'yz'.
     pixel_size=pixel_size,
-    alpha=3,  # width factor for Gaussian window
 )
 print(source_position)
 
@@ -38,7 +37,8 @@ print(source_position)
 print("Running simulation...")
 start = time()
 u, iterations, residual_norm = simulate(
-    permittivity=permittivity, sources=[(source_values, source_position)], wavelength=wavelength, pixel_size=pixel_size
+    permittivity=permittivity, sources=[(source_values, source_position)], wavelength=wavelength, pixel_size=pixel_size,
+    boundary_width=4 * wavelength,  # Boundary width in micrometer (μm)
 )
 sim_time = time() - start
 print(f"Time {sim_time:2.2f} s; Iterations {iterations}; Time per iteration {sim_time / iterations:.4f} s")

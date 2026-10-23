@@ -52,8 +52,8 @@ permittivity = random_permittivity(sim_size, pixel_size, seed=42)
 # Create a plane wave source with Gaussian intensity profile
 source_values, source_position = gaussian_beam(
     shape=(sim_size[1], sim_size[2]),  # source shape in micrometer (μm)
-    origin="topleft",  # source position is defined with respect to this origin
-    position=[0, 0, 0, 0],  # source top left position in (x, y, z) in micrometer (μm)
+    origin="topleft",  # source position is defined with respect to this origin   
+    position=[0, 0, 0, 0],  # (polarization, x, y, z): polarization axis 0/1/2 = x/y/z; x, y, z = top-left corner of the source in micrometer (μm)
     source_plane="yz",  # The string is always sorted by alphabetical order, so 'xz' and 'zx' are both recognized as 'xz'.
     pixel_size=pixel_size,
 )

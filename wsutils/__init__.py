@@ -2,8 +2,6 @@ from . import create_medium
 from . import create_source
 from . import plotting
 from . import utilities
-from . import svmodes as svmodes_module
-from . import layout
 from .create_medium import (
     random_permittivity,
     sphere_permittivity,
@@ -16,19 +14,11 @@ from .create_source import (
     source_angled,
     expand_source_shape,
     check_source_parameters,
-    polarization_
+    polarization_,
+    apodise,
+    make_directional
 )
 from .plotting import plot_computed, plot_computed_and_reference, OUTPUT_DIR
-from .svmodes import svmodes, mode_source
-from .layout import (
-    index_canvas,
-    add_rect,
-    add_waveguide,
-    add_taper,
-    add_s_bend,
-    add_grating,
-    permittivity_2d,
-)
 from .utilities import (
     normalize,
     laplace_kernel_1d,
