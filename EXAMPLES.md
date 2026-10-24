@@ -71,5 +71,5 @@ Realistic, wavelength-scale devices — flat and nanopillar metalenses, a CMOS m
 photonic crystals and a bandgap waveguide bend, a computer-generated hologram, Bessel and
 vortex beams, random-microsphere scattering, image-sensor light trapping, and integrated
 photonics (grating coupler, MMI, directional coupler, GDSII-imported devices) — live in the
-companion repository **[`wavesimpro-examples`](https://github.com/RayFos-Ltd/wavesimpro-examples)**
-as notebooks. They use the same `wsutils` helpers as this kit.
+companion repository **`wavesimpro-examples`**, to be published.
+They are notebooks and use the same `wsutils` helpers as this kit.

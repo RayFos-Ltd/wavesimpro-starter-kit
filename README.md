@@ -131,7 +131,7 @@ python examples/helmholtz_simulate.py
 For a guided tour of all the scripts — getting-started building blocks and validation
 cases — see the **[Examples Catalogue](EXAMPLES.md)**. Realistic devices (metalenses,
 photonic crystals, holograms, image sensors, integrated photonics) are in the companion
-notebook repository [`wavesimpro-examples`](https://github.com/RayFos-Ltd/wavesimpro-examples).
+notebook repository `wavesimpro-examples`, to be published.
 
 ## Layout
 
