@@ -89,7 +89,6 @@ gaussian_source, gs_position = create_source.gaussian_beam(
     position=[0, 0, 0],
     source_plane="xz",  # The string is always sorted by alphabetical order, so 'xz' and 'zx' are both recognized as 'xz'.
     pixel_size=pixel_size,
-    alpha=3,  # width factor for Gaussian window
     amplitude=np.complex64(2.0, 0.0),
 )  # Gaussian beam in XZ plane at Y start
 

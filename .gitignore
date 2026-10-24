@@ -25,6 +25,9 @@ env/
 CLAUDE.md
 .claude/
 
+# Notebooks are generated from their paired .py scripts; executed outputs bloat history
+*.ipynb
+
 # Output artifacts from examples (figures, saved fields)
 # All examples write generated figures here via wsutils.OUTPUT_DIR.
 output/

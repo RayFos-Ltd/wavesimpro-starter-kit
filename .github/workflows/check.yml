@@ -1,0 +1,33 @@
+name: check
+
+on: [push, pull_request]
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    env:
+      MPLBACKEND: Agg
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install .
+
+      - name: Every script compiles
+        run: python -m compileall -q examples wsutils
+
+      - name: Helpers build sources and media
+        run: |
+          python - <<'EOF'
+          import numpy as np
+          from wsutils import point_source, plane_wave, gaussian_beam, random_permittivity, cuboids_permittivity, sphere_permittivity, apodise, relative_error
+          px = 0.25
+          eps = random_permittivity((8, 8, 8), px)
+          assert eps.shape == (32, 32, 32)
+          v, p = gaussian_beam(shape=(8, 8), origin="topleft", position=[1, 0, 0, 0], source_plane="yz", pixel_size=px)
+          assert v.shape == (1, 1, 32, 32) and len(p) == 4
+          v, p = point_source(position=(4, 4, 4), pixel_size=px)
+          assert relative_error(np.ones(3), np.ones(3)) == 0
+          print("helpers ok")
+          EOF

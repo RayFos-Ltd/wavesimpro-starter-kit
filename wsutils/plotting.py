@@ -21,7 +21,55 @@ def _save_figure(filename):
     plt.savefig(f'{filename}.pdf', bbox_inches='tight', pad_inches=0.03, dpi=300)
 
 
-def plot_computed(u, pixel_size, normalize_u=True, cmap="inferno", log=False, show=True, save=False, filename=None):
+def _to_plane(u):
+    """Reduce a field to a 2D (x, y) plane for imaging.
+
+    4D (polarization, x, y, z) -> x-polarization; 3D (x, y, z) -> XY slice at the middle of z.
+    Returns (plane, slice index, number of z slices); the last two are None for 2D input.
+    """
+    if u.ndim == 4:
+        u = u[0, ...]  # x-polarization
+    if u.ndim == 3:
+        k = u.shape[2] // 2
+        return u[:, :, k], k, u.shape[2]
+    return u, None, None
+
+
+def _extent(shape, pixel_size, centered):
+    """[left, right, bottom, top] in µm for an (x, y) array, y pointing up (as in the web GUI)."""
+    nx, ny = shape
+    if centered:
+        return np.array([-nx / 2, nx / 2, -ny / 2, ny / 2]) * pixel_size
+    return np.array([0, nx, 0, ny]) * pixel_size
+
+
+def _slice_title(k, n, pixel_size, centered):
+    """Title naming the XY slice shown, e.g. for matching the slice slider in the web GUI."""
+    if k is None:
+        return None
+    z = (k + 0.5 - (n / 2 if centered else 0)) * pixel_size
+    return rf"XY slice, $z$ = {z:.3g} $\mu m$ (index {k}/{n})"
+
+
+def _imshow_field(u, pixel_size, centered=True, axis_labels=("x", "y"), cmap="inferno", log=False, vmin=None, vmax=None):
+    """Show a 2D (x, y) array with x horizontal and y pointing up, matching the web GUI."""
+    if log:
+        kwargs = dict(norm=colors.LogNorm(vmin=vmin, vmax=vmax))
+    else:
+        kwargs = dict(vmin=vmin, vmax=vmax)
+    plt.imshow(u.T, origin="lower", cmap=cmap, extent=_extent(u.shape, pixel_size, centered), **kwargs)
+    plt.xlabel(rf"${axis_labels[0]}~(\mu m)$")
+    plt.ylabel(rf"${axis_labels[1]}~(\mu m)$")
+
+
+def plot_computed(u, pixel_size, normalize_u=True, cmap="inferno", log=False, show=True, save=False, filename=None,
+                  centered=True, axis_labels=("x", "y")):
+    """Plot a computed field. 1D: real and imaginary parts. 2D/3D/4D: |u| of the (central XY) plane.
+
+    Images follow the web GUI convention: y points up and, with centered=True, the axes are
+    centred on the domain (0 at the middle), matching origin='center' in create_medium/create_source.
+    axis_labels names the two plotted axes, e.g. ("x", "z") for an XZ monitor plane.
+    """
     date_time = strftime("%Y%m%d_%H%M%S", localtime())
     if u.ndim == 1:
         u_range = np.arange(u.shape[0]) * pixel_size
@@ -42,22 +90,17 @@ def plot_computed(u, pixel_size, normalize_u=True, cmap="inferno", log=False, sh
             filename = f'{OUTPUT_DIR}/fig1d_{date_time}'
 
     else:
-        if u.ndim == 4:
-            u = u[0, ...]  # x-polarization
-
-        if u.ndim == 3:
-            u = u[:, :, u.shape[2] // 2]
-
+        u, k, n = _to_plane(u)
         u = np.abs(u)
 
         if normalize_u:
             min_val = np.min(u)
             u = normalize(u, a=1e-10 if min_val == 0 else 0.01 * min_val)
 
-        extent = np.array([0, u.shape[0], u.shape[1], 0]) * pixel_size
-        plt.imshow(u.T, cmap=cmap, extent=extent, norm=colors.LogNorm() if log else None)
-        plt.xlabel(r"$x~(\mu m)$")
-        plt.ylabel(r"$y~(\mu m)$")
+        _imshow_field(u, pixel_size, centered, axis_labels, cmap, log)
+        title = _slice_title(k, n, pixel_size, centered)
+        if title:
+            plt.title(title)
         cbar = plt.colorbar(fraction=0.046, pad=0.04)
         cbar.ax.set_title(r"$|E|$")
         plt.tight_layout()
@@ -71,11 +114,13 @@ def plot_computed(u, pixel_size, normalize_u=True, cmap="inferno", log=False, sh
     plt.close('all')
 
 
-def plot_computed_and_reference(u, u_ref, pixel_size, re=None, normalize_u=True, cmap="inferno", log=False, show=True, save=False, filename=None):
+def plot_computed_and_reference(u, u_ref, pixel_size, re=None, normalize_u=True, cmap="inferno", log=False, show=True, save=False, filename=None,
+                                centered=True, axis_labels=("x", "y")):
     """Plot the computed field u and the reference field u_ref.
     If u and u_ref are 1D arrays, the real and imaginary parts are plotted separately.
     If u and u_ref are 2D arrays, the absolute values are plotted.
-    If u and u_ref are 3D arrays, the central slice is plotted.
+    If u and u_ref are 3D arrays, the central XY slice (middle of z) is plotted; 4D uses the x-polarization.
+    Images follow the web GUI convention (y up; centred axes if centered=True), as in plot_computed.
     If normalize_u is True, the values are normalized to the same range.
     The relative error is (computed, if needed, and) displayed.
     """
@@ -110,13 +155,8 @@ def plot_computed_and_reference(u, u_ref, pixel_size, re=None, normalize_u=True,
             filename = f'logs/fig1d_{date_time}'
 
     else:
-        if u.ndim == 4 and u_ref.ndim == 4:
-            u = u[0, ...]
-            u_ref = u_ref[0, ...]
-
-        if u.ndim == 3 and u_ref.ndim == 3:
-            u = u[u.shape[0] // 2, ...]
-            u_ref = u_ref[u_ref.shape[0] // 2, ...]
+        u, k, n = _to_plane(u)
+        u_ref, _, _ = _to_plane(u_ref)
 
         u = np.abs(u)
         u_ref = np.abs(u_ref)
@@ -131,30 +171,15 @@ def plot_computed_and_reference(u, u_ref, pixel_size, re=None, normalize_u=True,
             a = None
             b = None
 
-        extent = np.array([0, u.shape[0], u.shape[1], 0]) * pixel_size
-
         plt.figure(figsize=(10, 5))
-        plt.subplot(121)
-        if log:
-            plt.imshow(u_ref, cmap=cmap, norm=colors.LogNorm(vmin=a, vmax=b), extent=extent)
-        else:
-            plt.imshow(u_ref, cmap=cmap, vmin=a, vmax=b, extent=extent)
-        plt.colorbar(fraction=0.046, pad=0.04)
-        plt.xlabel(r"$x~(\mu m)$")
-        plt.ylabel(r"$y~(\mu m)$")
-        plt.title("Reference")
+        for i, (field, name) in enumerate([(u_ref, "Reference"), (u, "Computed")]):
+            plt.subplot(121 + i)
+            _imshow_field(field, pixel_size, centered, axis_labels, cmap, log, vmin=a, vmax=b)
+            plt.colorbar(fraction=0.046, pad=0.04)
+            plt.title(name)
 
-        plt.subplot(122)
-        if log:
-            plt.imshow(u, cmap=cmap, norm=colors.LogNorm(vmin=a, vmax=b), extent=extent)
-        else:
-            plt.imshow(u, cmap=cmap, vmin=a, vmax=b, extent=extent)
-        plt.colorbar(fraction=0.046, pad=0.04)
-        plt.xlabel(r"$x~(\mu m)$")
-        plt.ylabel(r"$y~(\mu m)$")
-        plt.title("Computed")
-
-        plt.suptitle(f"Relative error (RE) = {re:.2e}")
+        slice_title = _slice_title(k, n, pixel_size, centered)
+        plt.suptitle(f"Relative error (RE) = {re:.2e}" + (f" — {slice_title}" if slice_title else ""))
         plt.tight_layout()
         if filename is None:
             filename = f'{OUTPUT_DIR}/fig2d_{date_time}'
