@@ -1,10 +1,10 @@
 import numpy as np
-from typing import Sequence
+from typing import Sequence, Union
 from scipy.signal.windows import gaussian
 
-# Local lightweight alias (formerly wavesim.engine.index_utils.shape_like).
-# These helpers build and return plain NumPy arrays, so no engine type is needed.
-shape_like = Sequence[int]
+# A source extent in micrometer (μm): one length per source-plane axis; a bare number for a
+# 1D source. These helpers build and return plain NumPy arrays, so no engine type is needed.
+shape_like = Union[float, Sequence[float]]
 
 
 def point_source(
@@ -72,8 +72,7 @@ def plane_wave(
     p = polarization_(position)
 
     # convert shape from micrometers to pixels
-    shape = (np.asarray(shape) / pixel_size).astype(int)
-    shape = (shape,) if isinstance(shape, int) or isinstance(shape, np.int64) else tuple(shape)
+    shape = tuple(np.atleast_1d(np.asarray(shape) / pixel_size).astype(int))
 
     source_values = np.ones(shape=shape[0], dtype=np.complex64)
     if theta is not None:
@@ -154,8 +153,7 @@ def gaussian_beam(
     p = polarization_(position)
 
     # convert shape from micrometers to pixels
-    shape = (np.asarray(shape) / pixel_size).astype(int)
-    shape = (shape,) if isinstance(shape, int) or isinstance(shape, np.int64) else tuple(shape)
+    shape = tuple(np.atleast_1d(np.asarray(shape) / pixel_size).astype(int))
 
     m = shape[0]  # number of points in the Gaussian window
     if waist is None:
@@ -224,7 +222,7 @@ def check_source_parameters(position, shape=None, source_plane=None):
 
     if shape is not None and source_plane is not None:
         if source_plane in ['x', 'y', 'z']:
-            if not (isinstance(shape, (int, np.integer)) or len(tuple(shape)) == 1):
+            if not (np.ndim(shape) == 0 or len(tuple(shape)) == 1):  # a length in μm, bare or as a 1-tuple
                 raise ValueError(f"Source shape {shape} invalid, should be 1D for source_plane='{source_plane}'")
         elif source_plane in ['xy', 'yz', 'xz']:
             assert len(shape) == 2, f"Source shape {shape} invalid, should be 2D for source_plane='{source_plane}'"

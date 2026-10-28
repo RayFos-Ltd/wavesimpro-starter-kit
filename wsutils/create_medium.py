@@ -4,9 +4,9 @@ from scipy.fft import fftn, ifftn, fftshift
 
 from .utilities import normalize
 
-# Local lightweight alias (formerly wavesim.engine.index_utils.shape_like).
-# These helpers build and return plain NumPy arrays, so no engine type is needed.
-shape_like = Sequence[int]
+# A domain extent in micrometer (μm), one length per axis. These helpers build and return
+# plain NumPy arrays, so no engine type is needed.
+shape_like = Sequence[float]
 
 
 def random_permittivity(shape: shape_like, pixel_size: float, seed = 0) -> np.ndarray:

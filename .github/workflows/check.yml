@@ -27,6 +27,12 @@ jobs:
           assert eps.shape == (32, 32, 32)
           v, p = gaussian_beam(shape=(8, 8), origin="topleft", position=[1, 0, 0, 0], source_plane="yz", pixel_size=px)
           assert v.shape == (1, 1, 32, 32) and len(p) == 4
+          # A 1D source takes its length in μm bare (int, float, NumPy scalar) or as a 1-tuple
+          for s in (4, 4.0, np.float64(4.0), (4.0,)):
+              v, p = gaussian_beam(shape=s, origin="center", position=[0, 4, 4, 4], source_plane="y", pixel_size=px, waist=1.0)
+              assert v.shape == (1, 1, 16, 1) and p == (0, 16, 8, 16), (s, v.shape, p)
+              v, p = plane_wave(shape=s, origin="topleft", position=(4, 4, 4), source_plane="x", pixel_size=px)
+              assert v.shape == (16, 1, 1) and p == (16, 16, 16), (s, v.shape, p)
           v, p = point_source(position=(4, 4, 4), pixel_size=px)
           assert relative_error(np.ones(3), np.ones(3)) == 0
           print("helpers ok")
