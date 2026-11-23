@@ -1,6 +1,6 @@
 [project]
 name = "wavesimpro-starter-kit"
-version = "0.2.1"
+version = "1.0.0"
 description = "Starter kit for the wavesimpro API: runnable examples plus engine-free helper utilities (source/medium construction, plotting)"
 readme = "README.md"
 requires-python = ">=3.11, <4.0"
@@ -14,15 +14,14 @@ license-files = ["LICENSE"]
 # Runtime dependencies. The utilities here are deliberately engine-free: they build and
 # return plain NumPy arrays, so the only wave-simulation dependency is wavesimpro (for `simulate`).
 dependencies = [
-    "wavesimpro",
+    "wavesimpro>=1.28.0",
     "numpy",
     "scipy>=1.15.0,<2.0.0",
     "matplotlib>=3.0",
 ]
 
-# Note: `simulate(..., use_gpu=True)` is a *server-side* flag for the wavesimpro cloud
-# platform — nothing runs on the local GPU and results return as host NumPy arrays, so
-# there is no local cupy dependency.
+# Note: the solve runs on the wavesimpro cloud platform — nothing runs on the local GPU and
+# results return as host NumPy arrays, so there is no local cupy dependency.
 
 [build-system]
 requires = ["setuptools>=77"]  # >=77 for PEP 639 SPDX `license` / `license-files`

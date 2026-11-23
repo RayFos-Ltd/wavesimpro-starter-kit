@@ -3,14 +3,20 @@ Helmholtz 1D analytical test
 ============================
 Test to compare the result of Wavesim to analytical results.
 Compare 1D free-space propagation with analytic solution.
+
+Size: 0.0028 Mvoxel including boundaries, 0.0001 GB of memory (service estimate).
 """
 
 import numpy as np
 from time import time
 
 from wsutils.create_source import point_source
-from wavesimpro import simulate
-from wsutils import all_close, analytical_solution, relative_error, plot_computed_and_reference
+from wavesimpro import simulate, configure
+from wsutils import all_close, analytical_solution, relative_error, plot_computed_and_reference, output_dir
+
+NAME = "hmhz_1d_analytical"  # run name on the service and output folder
+OUTPUT_DIR = output_dir(NAME)
+configure(description=NAME)
 
 # Parameters
 wavelength = 0.5  # wavelength in micrometer (μm)
@@ -52,7 +58,7 @@ re = relative_error(u, u_ref)
 print(f"Relative error with reference: {re:.2e}")
 
 # Plot the results
-plot_computed_and_reference(u, u_ref, pixel_size, re)
+plot_computed_and_reference(u, u_ref, pixel_size, re, save=True, filename=f"{OUTPUT_DIR}/{NAME}")
 
 threshold = 1.0e-3
 assert re < threshold, f"Relative error higher than {threshold}"

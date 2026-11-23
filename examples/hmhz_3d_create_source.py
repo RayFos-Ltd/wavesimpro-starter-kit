@@ -1,21 +1,24 @@
 """
-Helmholtz 3D example to demonstrate utilities.create_source
-===========================================================
+Helmholtz 3D example to demonstrate wsutils.create_source
+=========================================================
 This example simulates the propagation of a wave through a 3D medium
 with an interface of two media with different refractive indices, and
 can be simulated with one of the three primitive sources available as
-functions in utilities.create_source: point_source, plane_wave, or
+functions in wsutils.create_source: point_source, plane_wave, or
 gaussian_beam.
+
+Size: 10.75 Mvoxel including boundaries, 0.240 GB of memory (service estimate).
 """
 
 import numpy as np
 from time import time
 
-import sys
+from wsutils import create_source, plot_computed, output_dir
+from wavesimpro import simulate, configure
 
-sys.path.append(".")
-from wsutils import create_source, plot_computed
-from wavesimpro import simulate
+NAME = "hmhz_3d_create_source"  # run name on the service and output folder
+OUTPUT_DIR = output_dir(NAME)
+configure(description=NAME)
 
 # Parameters
 wavelength = 1.0  # wavelength in micrometer (μm)
@@ -48,7 +51,7 @@ refractive_index[:, refractive_index.shape[1] // 2 :, :] = (
 #     pixel_size=pixel_size,
 #     amplitude=2,
 #     theta=np.pi / 4,  # angle of incidence of the source with respect to the source axis in radians
-#     phi=np.pi / 6  # angle of incidence of the source in the plane orthogonal to the source axis in radians
+#     phi=np.pi / 6,  # angle of incidence of the source in the plane orthogonal to the source axis in radians
 #     wavelength=wavelength,  # wavelength must be defined for angled source, i.e. when theta or phi is not None
 # )
 
@@ -80,4 +83,4 @@ sim_time = time() - start
 print(f"Time {sim_time:2.2f} s; Iterations {iterations}; Time per iteration {sim_time / iterations:.4f} s")
 print(f"(Residual norm {residual_norm:.2e})")
 
-plot_computed(u, pixel_size, normalize_u=False, log=True)
+plot_computed(u, pixel_size, normalize_u=False, log=True, save=True, filename=f"{OUTPUT_DIR}/{NAME}")

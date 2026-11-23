@@ -1,9 +1,11 @@
 """
-Maxwell 2D example to demonstrate utilities.create_medium
-=========================================================
+Maxwell 2D example to demonstrate wsutils.create_medium
+=======================================================
 This example simulates the propagation of a wave through a 2D medium
 with rectangular block(s) of material(s) in a homogeneous background
 permittivity, by solving Maxwell's equations.
+
+Size: 0.085 Mvoxel including boundaries, 0.004 GB of memory (service estimate).
 """
 
 import numpy as np
@@ -11,8 +13,12 @@ from time import time
 
 from wsutils.create_source import gaussian_beam
 from wsutils.create_medium import cuboids_permittivity
-from wavesimpro import simulate
-from wsutils import plot_computed
+from wavesimpro import simulate, configure
+from wsutils import plot_computed, output_dir
+
+NAME = "mx_2d_create_medium"  # run name on the service and output folder
+OUTPUT_DIR = output_dir(NAME)
+configure(description=NAME)
 
 # Parameters
 material_1 = 2.9277 + 3.8315j  # Iron
@@ -33,7 +39,7 @@ permittivity = cuboids_permittivity(
 source_values, source_position = gaussian_beam(
     shape=(sim_size[0]),  # source shape, 1D in X direction, in micrometer (μm)
     origin="topleft",  # source position is defined with respect to this origin
-    position=[2, 0, 0, 0],  # source top left position in (x, y, z) in micrometer (μm)
+    position=[2, 0, 0, 0],  # (polarization, x, y, z): polarization 2 = z; top left position in micrometer (μm)
     source_plane="x",
     pixel_size=pixel_size,
 )
@@ -53,4 +59,4 @@ sim_time = time() - start
 print(f"Time {sim_time:2.2f} s; Iterations {iterations}; Time per iteration {sim_time / iterations:.4f} s")
 print(f"(Residual norm {residual_norm:.2e})")
 
-plot_computed(u[2, ...], pixel_size, normalize_u=False)
+plot_computed(u[2, ...], pixel_size, normalize_u=False, save=True, filename=f"{OUTPUT_DIR}/{NAME}")

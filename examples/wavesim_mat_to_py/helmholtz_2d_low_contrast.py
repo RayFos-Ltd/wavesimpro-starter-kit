@@ -3,7 +3,9 @@ Helmholtz 2D low contrast test
 ===============================
 Test for propagation in 2D structure with low refractive index contrast 
 (made of fat and water to mimic biological tissue). 
-Compare with reference solution (matlab repo result). 
+Compare with the reference solution computed by the MATLAB WaveSim implementation.
+
+Size: 0.250 Mvoxel including boundaries, 0.008 GB of memory (service estimate).
 """
 
 import numpy as np
@@ -11,8 +13,12 @@ from time import time
 from scipy.io import loadmat
 from PIL.Image import fromarray, open, Resampling
 
-from wavesimpro import simulate
-from wsutils import relative_error, plot_computed_and_reference
+from wavesimpro import simulate, configure
+from wsutils import relative_error, plot_computed_and_reference, output_dir
+
+NAME = "helmholtz_2d_low_contrast"  # run name on the service and output folder
+OUTPUT_DIR = output_dir(NAME)
+configure(description=NAME)
 
 # Parameters
 n_water = 1.33
@@ -45,7 +51,7 @@ sim_time = time() - start
 print(f"Time {sim_time:2.2f} s; Iterations {iterations}; Time per iteration {sim_time / iterations:.4f} s")
 print(f"(Residual norm {residual_norm:.2e})")
 
-# load dictionary of results from matlab wavesim/anysim for comparison and validation
+# load the MATLAB reference results
 u_ref = np.squeeze(loadmat("examples/wavesim_mat_to_py/matlab_results.mat")["u2d_lc"])
 
 # Compute relative error with respect to the reference solution
@@ -53,8 +59,7 @@ re = relative_error(u, u_ref)
 print(f"Relative error with reference: {re:.2e}")
 
 # Plot the results
-plot_computed_and_reference(u, u_ref, pixel_size, re)
+plot_computed_and_reference(u, u_ref, pixel_size, re, save=True, filename=f"{OUTPUT_DIR}/{NAME}")
 
 threshold = 1.0e-3
 assert re < threshold, f"Relative error {re} higher than {threshold}"
-# assert all_close(u, u_ref, rtol=4e-2)  # todo: relative error is too high. Absolute error is fine

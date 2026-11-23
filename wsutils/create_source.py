@@ -157,9 +157,7 @@ def gaussian_beam(
 
     m = shape[0]  # number of points in the Gaussian window
     if waist is None:
-        # (m-1)/2 is centre to edge; 3 puts that edge at 3 sigma. 3 was the default of the
-        # retired alpha/n_sigma parameter, and the value every call site passed.
-        sigma = (m - 1) / (2 * 3)
+        sigma = (m - 1) / (2 * 3)  # edge of the source at 3 sigma
     else:
         sigma = waist / (np.sqrt(2) * pixel_size)  # w0 = sqrt(2) sigma, in pixels
     source_values = gaussian(m, sigma).astype(np.complex64)
@@ -246,21 +244,6 @@ def polarization_(position):
 #   make_directional() drives a LENGTH of guide with the mode's own exp(i*beta*s), tapered
 #                      at its ends, so it is phase-matched to the wave travelling one way
 #                      and mismatched to the one travelling the other.
-#
-# Measured on a straight 500 x 220 nm SOI guide at 1550 nm, 15 cells/wavelength, reading
-# the guided power behind the source as a fraction of the forward power:
-#
-#     plane sheet, no taper                  101.2 % backward
-#     plane sheet, tapered                   101.0 % backward
-#     1.5 um volume, phase-matched, alpha=0    0.38 % backward
-#     3.0 um volume, phase-matched, alpha=0    0.11 % backward
-#     3.0 um volume, phase-matched, alpha=1    0.00 % backward
-#
-# Tapering a plane sheet changes the backward power by 0.2 points, i.e. not at all: a
-# plane electric current sheet has no magnetic partner and radiates both ways by symmetry.
-# Only the phase ramp fixes that. The taper meanwhile improved the near-field flatness in
-# both cases (3.2 % -> 2.6 % for the sheet, 0.80 % -> 0.14 % for the volume), which is the
-# job it does do.
 
 
 def _window_1d(n, alpha, kind):
@@ -280,9 +263,8 @@ def apodise(source, axes, alpha=0.3, window="tukey"):
     """Taper a source's envelope along one or more axes.
 
     A source that stops abruptly has a spectrum with slowly decaying tails, so it radiates
-    angular content nobody asked for -- the hard-aperture diffraction that several examples
-    in this kit already avoid by multiplying a Tukey window onto their plane waves. This
-    does that in one place, for any source, including ones built by hand.
+    angular content nobody asked for (hard-aperture diffraction). This works on any
+    source, including ones built by hand.
 
     It does NOT make a source directional; see ``make_directional``.
 
@@ -291,8 +273,8 @@ def apodise(source, axes, alpha=0.3, window="tukey"):
         axes: the axes to taper: 'x', 'y' or 'z', or several as one string ('yz') or a
             sequence. Use the transverse axes for a sheet or beam, the propagation axis
             for the ends of a volume source built by ``make_directional``.
-        alpha: Tukey taper fraction, 0 (no taper) to 1 (full Hann). 0.2-0.35 is what the
-            plane-wave examples here use.
+        alpha: fraction of each axis covered by the cosine taper, split between its two
+            ends: 0 is no taper, 1 a full Hann window. Ignored for ``window='hann'``.
         window: 'tukey' (default) or 'hann'.
     Returns:
         ``(source_values, position)`` with the same shapes and position.
@@ -324,26 +306,7 @@ def make_directional(source, axis, n_eff, wavelength, pixel_size, length,
     the guide with the mode's own ``exp(i*beta*s)``. The forward wave is phase-matched
     along the whole source and adds; the backward wave is mismatched by ``2*beta`` and
     cancels. Radiation, travelling at a different phase velocity, is suppressed the same
-    way.
-
-    Measured on a 500 x 220 nm SOI guide at 1550 nm with the default taper, 3.0 um of
-    source leaves no measurable power going backwards; untapered (``alpha=0``), 1.5 um
-    leaves 0.38 % of the forward power and 3.0 um leaves 0.11 %. Longer is more
-    directional, at the cost of occupying more of the domain.
-
-    Placement, also measured on that guide:
-      * how much clearance a device or monitor needs past the source END depends on how
-        faithfully the source was built, not on this function. Driven with the current
-        that launches the mode -- ``J = n_hat x H`` from a full-vector mode solver --
-        the power read downstream is within 0.2 % of its settled value a quarter of a
-        micron out. Driven with an approximation to that current it can be a percent or
-        two out for several microns, and anything placed inside that region is being lit
-        by light that is not the mode. Measure it rather than assume it: read the guided
-        power at a series of planes on plain guide and see where it stops changing.
-      * the absorbing boundary does not perturb the launch even with the source's leading
-        edge 0.15 um from the domain face (forward power flat to 0.06 % over a standoff
-        sweep), because the absorber is added OUTSIDE the domain and the source is still
-        in lossless material.
+    way. A longer driven length is more directional but occupies more of the domain.
 
     Args:
         source: ``(source_values, position)``; must be a single plane along ``axis``.

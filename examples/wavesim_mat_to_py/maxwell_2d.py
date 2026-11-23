@@ -2,7 +2,9 @@
 Maxwell's equations for 2D propagation.
 =======================================
 Test for Maxwell's equations for 2D propagation. 
-Compare with reference solution (matlab repo result).
+Compare with the reference solution computed by the MATLAB WaveSim implementation.
+
+Size: 0.071 Mvoxel including boundaries, 0.004 GB of memory (service estimate).
 """
 
 import numpy as np
@@ -10,8 +12,12 @@ from time import time
 from scipy.io import loadmat
 
 from wsutils.create_source import gaussian_beam
-from wavesimpro import simulate
-from wsutils import relative_error, plot_computed_and_reference
+from wavesimpro import simulate, configure
+from wsutils import relative_error, plot_computed_and_reference, output_dir
+
+NAME = "maxwell_2d"  # run name on the service and output folder
+OUTPUT_DIR = output_dir(NAME)
+configure(description=NAME)
 
 
 # Parameters
@@ -19,7 +25,7 @@ wavelength = 1.0  # Wavelength in micrometer (μm)
 pixel_size = wavelength / 8  # Pixel size in micrometer (μm)
 
 # Size of the simulation domain
-sim_size = np.array([16, 32])  # Simulation size in micrometer in micrometer (μm)
+sim_size = np.array([16, 32])  # Simulation size in micrometer (μm)
 n_size = sim_size / pixel_size  # Size of the simulation domain in pixels
 n_size = tuple(n_size.astype(int)) + (1,)  # Add 3rd dimension for z-axis
 
@@ -54,7 +60,7 @@ sim_time = time() - start
 print(f"Time {sim_time:2.2f} s; Iterations {iterations}; Time per iteration {sim_time / iterations:.4f} s")
 print(f"(Residual norm {residual_norm:.2e})")
 
-# load dictionary of results from matlab wavesim/anysim for comparison and validation
+# load the MATLAB reference results
 u_ref = np.squeeze(loadmat("examples/wavesim_mat_to_py/matlab_results.mat")["maxwell_2d"])
 u_ref = np.moveaxis(u_ref, -1, 0)  # polarization is in the last axis in MATLAB
 u_ref = u_ref[(1, 0, 2), ...]  # x and y polarization are switched in MATLAB
@@ -64,7 +70,8 @@ re = relative_error(u, u_ref)
 print(f"Relative error with reference: {re:.2e}")
 
 # Plot the results
-plot_computed_and_reference(u[2, ...], u_ref[2, ...], pixel_size, re)  # Plot the z-polarization component
+plot_computed_and_reference(u[2, ...], u_ref[2, ...], pixel_size, re,
+                            save=True, filename=f"{OUTPUT_DIR}/{NAME}")  # Plot the z-polarization component
 
 threshold = 1.0e-3
 assert re < threshold, f"Relative error {re} higher than {threshold}"

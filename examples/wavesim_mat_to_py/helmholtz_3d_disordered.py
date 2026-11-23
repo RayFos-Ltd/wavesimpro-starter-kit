@@ -2,7 +2,9 @@
 Helmholtz 3D disordered medium test
 ===================================
 Test for propagation in a 3D disordered medium. 
-Compare with reference solution (matlab repo result). 
+Compare with the reference solution computed by the MATLAB WaveSim implementation.
+
+Size: 1.032 Mvoxel including boundaries, 0.023 GB of memory (service estimate).
 """
 
 import numpy as np
@@ -10,8 +12,12 @@ from time import time
 from scipy.io import loadmat
 
 from wsutils.create_source import point_source
-from wavesimpro import simulate
-from wsutils import relative_error, plot_computed_and_reference
+from wavesimpro import simulate, configure
+from wsutils import relative_error, plot_computed_and_reference, output_dir
+
+NAME = "helmholtz_3d_disordered"  # run name on the service and output folder
+OUTPUT_DIR = output_dir(NAME)
+configure(description=NAME)
 
 # Parameters
 wavelength = 1.0  # Wavelength in micrometer (μm)
@@ -41,7 +47,7 @@ sim_time = time() - start
 print(f"Time {sim_time:2.2f} s; Iterations {iterations}; Time per iteration {sim_time / iterations:.4f} s")
 print(f"(Residual norm {residual_norm:.2e})")
 
-# load dictionary of results from matlab wavesim/anysim for comparison and validation
+# load the MATLAB reference results
 u_ref = np.squeeze(loadmat("examples/wavesim_mat_to_py/matlab_results.mat")["u3d_disordered"])
 
 # Compute relative error with respect to the reference solution
@@ -49,8 +55,7 @@ re = relative_error(u, u_ref)
 print(f"Relative error with reference: {re:.2e}")
 
 # Plot the results
-plot_computed_and_reference(u, u_ref, pixel_size, re)
+plot_computed_and_reference(u, u_ref, pixel_size, re, save=True, filename=f"{OUTPUT_DIR}/{NAME}")
 
 threshold = 1.0e-3
 assert re < threshold, f"Relative error {re} higher than {threshold}"
-# assert all_close(u, u_ref, rtol=5.0e-3)  # todo: relative error is too high. Absolute error is fine

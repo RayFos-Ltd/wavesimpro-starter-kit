@@ -2,7 +2,9 @@
 Helmholtz 3D lens test
 =======================
 3D simulation for propagation through a lens,
-with a point source at one edge of the domain.
+with a Gaussian beam launched from one edge of the domain.
+
+Size: 20.80 Mvoxel including boundaries, 0.465 GB of memory (service estimate).
 """
 
 import numpy as np
@@ -10,8 +12,12 @@ from time import time
 from scipy.io import loadmat
 
 from wsutils.create_source import gaussian_beam
-from wavesimpro import simulate
-from wsutils import plot_computed
+from wavesimpro import simulate, configure
+from wsutils import plot_computed, output_dir
+
+NAME = "hmhz_3d_import_lens"  # run name on the service and output folder
+OUTPUT_DIR = output_dir(NAME)
+configure(description=NAME)
 
 # Parameters
 wavelength = 1.0  # Wavelength in micrometer (μm)
@@ -31,7 +37,6 @@ source_values, source_position = gaussian_beam(
     source_plane="yz",  # The string is always sorted by alphabetical order, so 'yz' and 'zy' are both recognized as 'yz'.
     pixel_size=pixel_size,
 )
-print(source_position)
 
 # Run the wavesim iteration and get the computed field
 print("Running simulation...")
@@ -44,4 +49,4 @@ sim_time = time() - start
 print(f"Time {sim_time:2.2f} s; Iterations {iterations}; Time per iteration {sim_time / iterations:.4f} s")
 print(f"(Residual norm {residual_norm:.2e})")
 
-plot_computed(u, pixel_size)
+plot_computed(u, pixel_size, save=True, filename=f"{OUTPUT_DIR}/{NAME}")

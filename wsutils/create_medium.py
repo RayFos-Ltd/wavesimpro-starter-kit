@@ -78,7 +78,7 @@ def cuboids_permittivity(
     Args:
         shape (Sequence[int]): Shape of the array (1D, 2D, or 3D).
         pixel_size: pixel size in micrometer (μm)
-        origin (str): Define the permittivity blocks with origin as 'origin' or 'topleft.'
+        origin (str): Define the permittivity blocks with origin at the 'center' or 'topleft' of each block.
         origin_size_material (Sequence[tuple[Sequence[float], Sequence[float], np.complex64]]):
             Sequence of tuples where each tuple defines (originN, sizeN, material).
         background (np.complex64): The refractive index value of the background.
@@ -133,25 +133,29 @@ def cuboids_permittivity(
 
 def sphere_permittivity(n_size, pixel_size, sphere_radius, sphere_index, bg_index, center=None):
     """
-    Returns a 3-D matrix of refractive indices for single sphere and the coordinate ranges.
-    The refractive index will be sphere_index inside a sphere and bg_index outside the sphere,
-    with radius sphere_radius (in micrometer) and pixel_size (in micrometer).
+    Returns a 3-D map of a single sphere and the coordinate ranges.
+    The map holds sphere_index inside the sphere of radius sphere_radius and bg_index outside
+    it. Values are written as given, without squaring: pass permittivities when the map is
+    used as a permittivity.
 
     Args:
         n_size: Number of points in each dimension (Nx, Ny, Nz)
         pixel_size: Pixel size in micrometer (μm)
         sphere_radius: Sphere radius in micrometer (μm)
-        sphere_index: Refractive index of the sphere
-        bg_index: Background refractive index
+        sphere_index: Value inside the sphere (a permittivity for a permittivity map)
+        bg_index: Value outside the sphere (a permittivity for a permittivity map)
         center: Center of the sphere (default: [0, 0, 0])
+
+    Returns:
+        The complex64 3-D map of shape n_size, and the x, y, z coordinate ranges.
     """
 
     center = [0, 0, 0] if center is None else center
 
     # Calculate coordinate ranges
     center = (np.array(n_size) / 2) * pixel_size + center
-    x_range = np.reshape((np.arange(1, n_size[1] + 1) * pixel_size - center[0]), (1, n_size[1], 1)).astype(np.float32)
-    y_range = np.reshape((np.arange(1, n_size[0] + 1) * pixel_size - center[1]), (n_size[0], 1, 1)).astype(np.float32)
+    x_range = np.reshape((np.arange(1, n_size[0] + 1) * pixel_size - center[0]), (n_size[0], 1, 1)).astype(np.float32)
+    y_range = np.reshape((np.arange(1, n_size[1] + 1) * pixel_size - center[1]), (1, n_size[1], 1)).astype(np.float32)
     z_range = np.reshape((np.arange(1, n_size[2] + 1) * pixel_size - center[2]), (1, 1, n_size[2])).astype(np.float32)
 
     # Calculate refractive index

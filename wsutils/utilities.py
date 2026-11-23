@@ -34,9 +34,6 @@ def laplace_kernel_1d(pixel_size: float, length: int) -> np.ndarray:
         The elements at negative positions are wrapped to the end of the array.
     """
 
-    # original way (introduces wrapping artifacts in the kernel)
-    # return -self.coordinates_f(dim) ** 2
-
     if length == 1:
         return np.zeros((1,))
 
@@ -51,7 +48,6 @@ def laplace_kernel_1d(pixel_size: float, length: int) -> np.ndarray:
     x_kernel *= -np.pi**2 / pixel_size**2
 
     # adjust end point(s) to ensure the kernel has an average value of zero
-    # todo: find a more elegant way to do this
     if length % 2 == 0:
         x_kernel[length // 2] -= np.sum(x_kernel)  # even length, adjust only the furthest end point
     else:

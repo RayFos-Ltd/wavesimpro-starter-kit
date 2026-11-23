@@ -1,9 +1,11 @@
 """
-Helmholtz 1D example to demonstrate utilities.create_medium
-===========================================================
+Helmholtz 1D example to demonstrate wsutils.create_medium
+=========================================================
 This example simulates the propagation of a wave through a 1D medium
 with box-shaped block(s) of material(s) in a homogeneous background
 permittivity, by solving the Helmholtz equation.
+
+Size: 0.0004 Mvoxel including boundaries, 0.00001 GB of memory (service estimate).
 """
 
 import numpy as np
@@ -11,8 +13,12 @@ from time import time
 
 from wsutils.create_source import point_source
 from wsutils.create_medium import cuboids_permittivity
-from wavesimpro import simulate
-from wsutils import plot_computed
+from wavesimpro import simulate, configure
+from wsutils import plot_computed, output_dir
+
+NAME = "hmhz_1d_create_medium"  # run name on the service and output folder
+OUTPUT_DIR = output_dir(NAME)
+configure(description=NAME)
 
 # indicative materials. Optical refractive index at 1 μm (unless otherwise specified)
 material_1 = 3.5750 + 0.00049020j  # Silicon
@@ -49,4 +55,4 @@ sim_time = time() - start
 print(f"Time {sim_time:2.2f} s; Iterations {iterations}; Time per iteration {sim_time / iterations:.4f} s")
 print(f"(Residual norm {residual_norm:.2e})")
 
-plot_computed(u, pixel_size, normalize_u=False)
+plot_computed(u, pixel_size, normalize_u=False, save=True, filename=f"{OUTPUT_DIR}/{NAME}")

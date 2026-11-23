@@ -1,4 +1,4 @@
-wavesimpro
+wavesimpro>=1.28.0
 numpy
 scipy>=1.15.0,<2.0.0
 matplotlib>=3.0
