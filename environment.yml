@@ -10,4 +10,4 @@ dependencies:
   - pip
   - pip:
       # wavesimpro is PyPI-only (not on conda-forge): the cloud client that provides `simulate`.
-      - wavesimpro
+      - wavesimpro>=1.28.0

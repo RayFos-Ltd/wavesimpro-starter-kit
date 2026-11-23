@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 
 import numpy as np
 from matplotlib import colors
@@ -10,6 +11,20 @@ from .utilities import normalize, relative_error
 # Common folder for figures/artifacts produced by the examples. Git-ignored
 # (see .gitignore) so generated output never gets committed.
 OUTPUT_DIR = "output"
+
+
+def output_dir(name):
+    """Return ``<repo root>/output/<name>`` as a str, creating it if missing.
+
+    The repo root is the nearest directory at or above the current working directory
+    that holds ``pyproject.toml`` or ``.git``; without one, the current working directory.
+    """
+    cwd = Path.cwd()
+    root = next((d for d in (cwd, *cwd.parents)
+                 if (d / "pyproject.toml").exists() or (d / ".git").exists()), cwd)
+    path = root / OUTPUT_DIR / name
+    path.mkdir(parents=True, exist_ok=True)
+    return str(path)
 
 
 def _save_figure(filename):
@@ -152,7 +167,7 @@ def plot_computed_and_reference(u, u_ref, pixel_size, re=None, normalize_u=True,
         plt.tight_layout()
 
         if filename is None:
-            filename = f'logs/fig1d_{date_time}'
+            filename = f'{OUTPUT_DIR}/fig1d_{date_time}'
 
     else:
         u, k, n = _to_plane(u)

@@ -1,6 +1,9 @@
 from . import create_medium
 from . import create_source
 from . import plotting
+from . import power
+from . import propagation
+from . import gds
 from . import utilities
 from .create_medium import (
     random_permittivity,
@@ -18,7 +21,10 @@ from .create_source import (
     apodise,
     make_directional
 )
-from .plotting import plot_computed, plot_computed_and_reference, OUTPUT_DIR
+from .plotting import plot_computed, plot_computed_and_reference, OUTPUT_DIR, output_dir
+from .power import power_flux, absorbed_power
+from .gds import write_gds, circle
+from .propagation import propagate
 from .utilities import (
     normalize,
     laplace_kernel_1d,

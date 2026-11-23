@@ -5,15 +5,21 @@ A Gaussian beam hits a dielectric sphere. Instead of downloading the full 3-D fi
 two monitors are requested: an x-z plane through the sphere centre and a small cube
 behind it. With ``monitors=`` set, ``simulate`` returns a list with one array per
 monitor, in the order given, each shaped (3, nx, ny, nz) like the full field.
+
+Size: 0.512 Mvoxel including boundaries, 0.027 GB of memory (service estimate).
 """
 
 import numpy as np
 from time import time
 
-from wavesimpro import simulate, create_monitor
+from wavesimpro import simulate, create_monitor, configure
 from wsutils.create_medium import sphere_permittivity
 from wsutils.create_source import gaussian_beam
-from wsutils import plot_computed
+from wsutils import plot_computed, output_dir
+
+NAME = "mx_monitors"  # run name on the service and output folder
+OUTPUT_DIR = output_dir(NAME)
+configure(description=NAME)
 
 # Parameters
 wavelength = 1.0  # micrometer (μm)
@@ -35,7 +41,8 @@ source_values, source_position = gaussian_beam(
 )
 
 # Monitor positions are in world coordinates with the origin at the domain centre;
-# a size of one pixel along an axis returns a single voxel on that axis.
+# a monitor returns every voxel its box touches, so this plane, centred on a voxel face,
+# is two voxels thick.
 plane = create_monitor(name="xz_plane", center_x=0.0, center_y=0.0, center_z=0.0,
                        size_x=sim_size, size_y=pixel_size, size_z=sim_size)
 cube = create_monitor(name="behind_sphere", center_x=3.5, center_y=0.0, center_z=0.0,
@@ -58,5 +65,6 @@ print(f"xz_plane monitor: {u_plane.shape} (polarization, x, y, z)")
 print(f"behind_sphere monitor: {u_cube.shape}")
 print(f"mean |E|^2 behind the sphere: {np.mean(np.abs(u_cube) ** 2):.3e}")
 
-# |E|^2 on the plane, summed over the three components
-plot_computed(np.sqrt((np.abs(u_plane) ** 2).sum(axis=0))[:, 0, :], pixel_size, normalize_u=False, axis_labels=("x", "z"))
+# |E| on the plane, from all three components
+plot_computed(np.sqrt((np.abs(u_plane) ** 2).sum(axis=0))[:, 0, :], pixel_size, normalize_u=False, axis_labels=("x", "z"),
+              save=True, filename=f"{OUTPUT_DIR}/{NAME}")

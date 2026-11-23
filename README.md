@@ -27,10 +27,13 @@ It contains **only** what a user of `wavesimpro` needs to get going:
 - **`wsutils/`** — small, *engine-free* helper utilities to build inputs and inspect outputs:
   - `create_medium` — `random_permittivity`, `cuboids_permittivity`, `sphere_permittivity`
   - `create_source` — `point_source`, `plane_wave`, `gaussian_beam`, `apodise`, `make_directional`
-  - `plotting` — `plot_computed`, `plot_computed_and_reference`
+  - `plotting` — `plot_computed`, `plot_computed_and_reference`, `output_dir`
   - `utilities` — `relative_error`, `all_close`, `analytical_solution`, `normalize`, …
+  - `power` — `power_flux`, `absorbed_power`
+  - `propagation` — `propagate`: carry a field through a homogeneous medium by its angular spectrum
+  - `gds` — `write_gds`, `circle`: write polygons to a GDSII layout file
 - **`examples/`** — runnable scripts that solve the Helmholtz equation and Maxwell's equations
-  via `from wavesimpro import simulate`.
+  on the WaveSimPro cloud.
 
 These utilities produce plain NumPy arrays and depend only on NumPy/SciPy/Matplotlib — they do
 **not** import the `wavesim` core engine. The only wave-simulation dependency is `wavesimpro`.
@@ -58,6 +61,22 @@ The reference open-source Python implementation, **`wavesim_py`**, is available 
 [wavesim.readthedocs.io](https://wavesim.readthedocs.io/); project site:
 [wavesim.org](https://www.wavesim.org/)). The `wsutils` helpers in this starter kit are adapted
 from it — see [License](#license).
+
+## Quick start
+
+1. **Sign up** at [studio.rayfos.com](https://studio.rayfos.com/).
+2. **Create an API key** at [studio.rayfos.com/api-access](https://studio.rayfos.com/api-access)
+   and copy it.
+3. **Install** the kit (Python 3.11 or later) with conda or pip, as described in
+   [Install](#install) below.
+4. **Register the key:** run `python -m wavesimpro setup` and paste it. Alternatively, set the
+   environment variable `RAYFOS_API_KEY`, or put it in a `.env` file in the folder you run from.
+5. **Run an example** from the repository root:
+   ```bash
+   python examples/hmhz_simulate.py
+   ```
+   The figure is saved to `output/hmhz_simulate/`, and the run appears in Studio
+   ([studio.rayfos.com](https://studio.rayfos.com/)) under the script's name.
 
 ## Install
 
@@ -105,33 +124,16 @@ pip install -e .             # installs the local `wsutils` package
 
 Either way you end up with the `wsutils` package (and `wavesimpro`, `numpy`, `scipy`, `matplotlib`)
 on the path, so the example scripts run from anywhere with no `sys.path` juggling.
+Nothing runs on your local GPU, so there is no local GPU dependency to install.
 
-> **GPU note:** some examples pass `simulate(..., use_gpu=True)`. This is a *server-side* flag
-> for the `wavesimpro` cloud platform — nothing runs on your local GPU, and results return as
-> plain host NumPy arrays. There is **no** local `cupy` (or other GPU) dependency to install.
-
-## Get your API key
-
-The simulations run on the WaveSimPro cloud, so the `wavesimpro` client needs an API key to
-authenticate. Once you've [registered](https://studio.rayfos.com/), get one here:
-
-1. Sign in and open **[studio.rayfos.com/api-access](https://studio.rayfos.com/api-access)**.
-2. Use a key you already have, or click **Create** to generate a new one, and copy it.
-
-The first time you run a simulation, the `wavesimpro` client detects that it isn't configured yet
-and prints instructions on how to register your key (there is more than one supported way). Follow
-that prompt with the key you just copied — after that, the examples run without further setup.
-
-## Run an example
-
-```bash
-python examples/helmholtz_simulate.py
-```
+## Examples
 
 For a guided tour of all the scripts — getting-started building blocks and validation
-cases — see the **[Examples Catalogue](EXAMPLES.md)**. Realistic devices (metalenses,
-photonic crystals, holograms, image sensors, integrated photonics) are in the companion
-notebook repository `wavesimpro-examples`, to be published.
+cases — see the **[Examples Catalogue](EXAMPLES.md)**. The advanced examples — metalenses,
+image-sensor pixels, scattering media, photonic-crystal and integrated-photonics devices, and a
+few-mode fiber — are in the companion repository
+**[`wavesimpro-examples`](https://github.com/RayFos-Ltd/wavesimpro-examples)**, as paired
+scripts and executed notebooks.
 
 ## Layout
 
@@ -146,8 +148,11 @@ wavesimpro-starter-kit/
 │   ├── create_medium.py
 │   ├── create_source.py
 │   ├── plotting.py
-│   └── utilities.py
-└── examples/         # runnable simulate-based scripts
+│   ├── utilities.py
+│   ├── power.py
+│   ├── propagation.py
+│   └── gds.py
+└── examples/         # runnable scripts and the layout, mesh and data files they read
 ```
 
 ## Notes

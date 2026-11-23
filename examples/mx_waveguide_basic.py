@@ -6,16 +6,21 @@ A narrow Gaussian beam launched into the strip near its start is guided by total
 reflection, so the field at the far end is still confined to the strip. The script prints
 how much of the power stays within the strip at two positions and plots |E_z|.
 
-Couplers, splitters and devices read from GDSII layouts are in the companion repository
-``wavesimpro-examples``.
+Couplers and splitters are in the companion repository ``wavesimpro-examples``.
+
+Size: 0.243 Mvoxel including boundaries, 0.013 GB of memory (service estimate).
 """
 
 import numpy as np
 from time import time
 
-from wavesimpro import simulate
+from wavesimpro import simulate, configure
 from wsutils.create_source import gaussian_beam
-from wsutils import plot_computed
+from wsutils import plot_computed, output_dir
+
+NAME = "mx_waveguide_basic"  # run name on the service and output folder
+OUTPUT_DIR = output_dir(NAME)
+configure(description=NAME)
 
 # Parameters
 wavelength = 1.55  # micrometer (μm)
@@ -60,4 +65,4 @@ for x_um in (4.0, 18.0):
     share = intensity[ix, in_core].sum() / intensity[ix].sum()
     print(f"x = {x_um:4.1f} um: {share * 100:5.1f}% of the power is inside the strip")
 
-plot_computed(u[2], pixel_size, normalize_u=False)
+plot_computed(u[2], pixel_size, normalize_u=False, save=True, filename=f"{OUTPUT_DIR}/{NAME}")

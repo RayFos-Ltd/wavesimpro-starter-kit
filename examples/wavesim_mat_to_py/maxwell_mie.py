@@ -2,16 +2,22 @@
 Maxwell's equations for Mie scattering.
 =======================================
 Test for Maxwell's equations for Mie scattering. 
-Compare with reference solution (matlab repo result).
+Compare with the reference solution computed by the MATLAB WaveSim implementation.
+
+Size: 2 solves, each 4.096 Mvoxel including boundaries, 0.214 GB of memory (service estimate).
 """
 
 import numpy as np
 from time import time
 from scipy.io import loadmat
 
-from wavesimpro import simulate
+from wavesimpro import simulate, configure
 from wsutils.create_medium import sphere_permittivity
-from wsutils import relative_error, plot_computed_and_reference, apodise
+from wsutils import relative_error, plot_computed_and_reference, apodise, output_dir
+
+NAME = "maxwell_mie"  # run name on the service and output folder
+OUTPUT_DIR = output_dir(NAME)
+configure(description=NAME, folder=NAME)  # every solve goes in one folder
 
 # Parameters
 wavelength = 1.0  # Wavelength in micrometer (μm)
@@ -72,7 +78,7 @@ print(f"(Residual norm {residual_norm:.2e})")
 # Subtract background to get the scattered field
 u = (u_sphere - u_bg)[1, n_size[0]//2, ...]  # 2D section of the y-polarization component to compare with analytical solution
 
-# load results from matlab wavesim for comparison and validation
+# load the MATLAB reference results
 u_ref = np.squeeze(loadmat("examples/wavesim_mat_to_py/matlab_results.mat")["maxwell_mie"])
 
 # Compute relative error with respect to the reference solution
@@ -80,7 +86,7 @@ re = relative_error(u, u_ref)
 print(f"Relative error: {re:.2e}")
 
 # Plot the results
-plot_computed_and_reference(u, u_ref, pixel_size, re)
+plot_computed_and_reference(u, u_ref, pixel_size, re, save=True, filename=f"{OUTPUT_DIR}/{NAME}")
 
 threshold = 2.0e-2  # In this simulation, the maximum accuracy is limited by the discretization of the Mie sphere, and can be further improved by performing the simulation on a finer grid. (Osnabrugge et al., 2021)
 assert re < threshold, f"Relative error {re} higher than {threshold}"
